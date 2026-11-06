@@ -103,6 +103,14 @@ button{font-family:inherit;cursor:pointer;border:none}
 .or{color:var(--muted);font-size:13px;margin:8px 0}
 .typebox input.he-in{direction:rtl}
 .newtag{background:#ff4d8d;color:#fff;font-size:11px;padding:2px 8px;border-radius:99px;vertical-align:middle;margin-right:4px}
+.focusc{border:3px solid #ff4d8d}
+.fbar{position:sticky;top:8px;z-index:5;background:#fff;border-radius:18px;padding:12px;margin-bottom:12px;box-shadow:0 8px 20px rgba(30,20,90,.25)}
+.fbar .cnt{font-weight:800;font-size:17px;margin-bottom:8px}
+.fbar .bs{display:flex;gap:6px;flex-wrap:wrap}
+.fbar .bs .btn{padding:10px 12px;font-size:14px}
+.ck{display:flex;align-items:center;padding:4px}
+.ck input{width:26px;height:26px;accent-color:#ff4d8d;margin:0}
+.wrow.sel{background:#fff1f6;border-radius:12px}
 .flash{perspective:1000px;height:260px;margin-bottom:14px;cursor:pointer}
 .flash .in{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
 .flash.flipped .in{transform:rotateY(180deg)}
@@ -202,7 +210,7 @@ const COMFORT = ['לא נורא!','כמעט!','בפעם הבאה!','ככה לו�
 const defaultState = () => ({
   name:'', progress:{}, xp:0, streak:0, lastDay:'', today:{date:'',correct:0},
   customWords:null, settings:{spelling:true, autospeak:true, sound:true},
-  milestones:[], best:{test:0, match:0}, cat:'', days:{}, tests:[]
+  milestones:[], best:{test:0, match:0}, cat:'', days:{}, tests:[], focus:[]
 });
 let S = loadState();
 function loadState(){
@@ -233,11 +241,21 @@ function allWords(){
 }
 function cats(){ const c = []; allWords().forEach(w => { if(w.cat && !c.includes(w.cat)) c.push(w.cat); }); return c; }
 // המילים לפי הנושא שנבחר (או כולן)
+// מיקוד: מילים שסומנו ב"המילים שלי". כשיש כאלה — כל האפליקציה עובדת רק עליהן
+function focusWords(){ const f = new Set(S.focus || []); return allWords().filter(w => f.has(key(w.en))); }
+const focusOn = () => focusWords().length > 0;
 function words(){
   const all = allWords();
+  if(focusOn()) return focusWords();
   if(!S.cat || !cats().includes(S.cat)) return all;
   return all.filter(w => w.cat === S.cat);
 }
+function toggleFocus(k, on){
+  const f = new Set(S.focus || []);
+  if(on) f.add(k); else f.delete(k);
+  S.focus = [...f]; save();
+}
+function clearFocus(){ S.focus = []; save(); }
 function setCat(c){ S.cat = c; save(); home(); }
 function prog(w){
   const k = key(w.en);
@@ -416,6 +434,7 @@ function weightOf(w){
   return wt;
 }
 function pickWords(n, maxNew=4){
+  if(focusOn()) maxNew = Infinity; // הוא בחר את המילים בעצמו — לא מגבילים מילים חדשות
   const pool = words(), res = []; let newCount = 0;
   while(res.length < n && pool.length){
     const ws = pool.map(w => { const isNew = !(peek(w)?.seen); return (isNew && newCount >= maxNew) ? 0.0001 : weightOf(w); });
@@ -449,6 +468,7 @@ function home(){
   const streak = (S.lastDay === dayStr() || S.lastDay === (()=>{const y=new Date();y.setDate(y.getDate()-1);return dayStr(y);})()) ? S.streak : 0;
   let msg;
   if(!st.total) msg = 'אין עדיין מילים — הוסיפו בהגדרות';
+  else if(st.known === st.total && focusOn()) msg = 'אתה יודע את כל המילים שבחרת! 🏆 אפשר לבחור מילים חדשות';
   else if(st.known === st.total) msg = 'אתה יודע את כל המילים! 🏆 תמשיך לחזור כדי לא לשכוח';
   else if(st.new === st.total) msg = `${st.total} מילים מחכות לך. בוא נתחיל!`;
   else msg = `יודע <b>${st.known}</b> מתוך ${st.total} מילים. עוד ${left} ואתה מוכן!`;
@@ -458,16 +478,22 @@ function home(){
     <h1>היי${S.name ? ' ' + esc(S.name) : ''}! 👋</h1>
     <p>${['בוא נלמד כמה מילים','כל יום קצת — ומגיעים רחוק','מוכן לאתגר?'][new Date().getDate()%3]}</p>
   </div>
-  ${cats().length > 1 ? `<div class="filters">
+  ${focusOn() ? `<div class="card focusc">
+      <div style="font-size:18px">🎯 <b>מתמקד ב-${focusWords().length} מילים שבחרת</b></div>
+      <div style="color:var(--muted);font-size:13px;margin:4px 0 10px">כל התרגולים, המשחקים והמבחן — רק עליהן, שוב ושוב</div>
+      <div class="row2"><button class="btn" onclick="wordList('focus')">✏️ שנה מילים</button><button class="btn sec" onclick="if(confirm('לבטל את המיקוד ולחזור לכל המילים?')){clearFocus();home()}">✕ בטל מיקוד</button></div>
+    </div>`
+  : `${cats().length > 1 ? `<div class="filters">
     <button class="${!S.cat || !cats().includes(S.cat) ? 'on' : ''}" onclick="setCat('')">כל המילים (${allWords().length})</button>
     ${cats().map((c,i) => `<button class="${S.cat === c ? 'on' : ''}" onclick="setCat(cats()[${i}])">${esc(c)} (${allWords().filter(w => w.cat === c).length})</button>`).join('')}
   </div>` : ''}
+  <button class="ghost" style="width:100%;margin-bottom:14px" onclick="wordList('all')">🎯 בחר מילים להתמקד בהן</button>`}
   ${!S.name ? `<div class="card set"><b>איך קוראים לך?</b>
      <div style="display:flex;gap:8px;margin-top:10px"><input type="text" id="nm" placeholder="השם שלך"><button class="btn" onclick="setName()">שמור</button></div></div>` : ''}
   <div class="card">
     <div class="ready">
       <div class="ring" style="--p:${st.ready}"><div>${st.ready}%</div></div>
-      <div><h2>מוכנות למבחן${S.cat && cats().includes(S.cat) ? ' — ' + esc(S.cat) : ''}</h2><p>${msg}</p></div>
+      <div><h2>מוכנות למבחן${focusOn() ? ' — המילים שבחרת' : S.cat && cats().includes(S.cat) ? ' — ' + esc(S.cat) : ''}</h2><p>${msg}</p></div>
     </div>
     <div class="stack">
       <div style="width:${pc('known')}%;background:var(--known)"></div>
@@ -488,7 +514,7 @@ function home(){
     <div class="chip"><b>🔥 ${streak}</b><small>ימים ברצף</small></div>
     <div class="chip"><b>🏅 ${S.best.test || '-'}</b><small>שיא במבחן</small></div>
   </div>
-  ${ws.length < 4 ? `<div class="card">צריך לפחות 4 מילים כדי לשחק. הוסיפו מילים ב⚙️ הגדרות.</div>` : `
+  ${allWords().length < 4 ? `<div class="card">צריך לפחות 4 מילים כדי לשחק. הוסיפו מילים ב⚙️ הגדרות.</div>` : `
   <button class="big" onclick="startSmart()">🚀 תרגול חכם<small>מתמקד במילים שעוד לא יודע</small></button>
   <div class="grid">
     <button class="game" onclick="startMode('flash')"><span class="ic">🃏</span><b>כרטיסיות</b><small>הפוך ובדוק את עצמך</small></button>
@@ -554,7 +580,7 @@ function askExit(){
 }
 function options(w, field){
   const opts = [w[field]], seen = new Set([w[field].trim()]);
-  for(const o of shuffle(words())){
+  for(const o of shuffle(allWords())){
     if(opts.length >= 4) break;
     const v = o[field].trim();
     if(key(o.en) !== key(w.en) && !seen.has(v)){ seen.add(v); opts.push(o[field]); }
@@ -968,6 +994,7 @@ function reportText(){
   L.push(`📅 ${new Date().toLocaleDateString('he-IL')}`);
   L.push('');
   L.push(`🎯 מוכנות למבחן: ${a.ready}%`);
+  if(focusOn()){ const fs = stats(focusWords()); L.push(`🔎 מתמקד עכשיו ב-${fs.total} מילים (יודע ${fs.known}): ${focusWords().map(w => display(w.en)).join(', ')}`); }
   L.push(`✅ יודע: ${a.known} | 🟡 כמעט: ${a.almost} | 🟠 לומד: ${a.learning} | ⚪ עוד לא התחיל: ${a.new}  (מתוך ${a.total})`);
   if(r.byCat.length > 1){ L.push(''); L.push('📚 לפי נושא:'); r.byCat.forEach(x => L.push(`• ${x.c}: ${x.st.ready}% (יודע ${x.st.known}/${x.st.total})`)); }
   L.push('');
@@ -1031,30 +1058,73 @@ function copyReport(){
 }
 
 /* ================= רשימת המילים ================= */
-let wfilter = 'all';
-function wordList(f){
+let wfilter = 'all', wcat = '';
+function wordList(f, c){
   if(f) wfilter = f;
-  const st = stats();
-  const order = {new:0, learning:1, almost:2, known:3};
-  let ws = words().slice().sort((a,b) => (peek(a)?.lvl||0) - (peek(b)?.lvl||0) || order[category(a)] - order[category(b)]);
+  if(c !== undefined) wcat = c;
+  const all = allWords(), order = {new:0, learning:1, almost:2, known:3};
+  const inCat = all.filter(w => !wcat || w.cat === wcat);
+  const st = stats(inCat), F = () => new Set(S.focus || []);
+  let ws = inCat.slice().sort((a,b) => (peek(a)?.lvl||0) - (peek(b)?.lvl||0) || order[category(a)] - order[category(b)]);
+  if(wfilter === 'focus') ws = ws.filter(w => F().has(key(w.en)));
   if(wfilter === 'todo') ws = ws.filter(w => ['new','learning'].includes(category(w)));
   if(wfilter === 'almost') ws = ws.filter(w => category(w) === 'almost');
   if(wfilter === 'known') ws = ws.filter(w => category(w) === 'known');
   const lbl = {new:'חדשה', learning:'לומד', almost:'כמעט', known:'יודע ⭐'};
+  const nFocusCat = inCat.filter(w => F().has(key(w.en))).length;
   app().innerHTML = `
   <div class="top"><button class="x" onclick="home()">→</button><h2 style="margin:0">📚 המילים שלי</h2></div>
+  <div class="fbar">
+    <div class="cnt" id="fcnt"></div>
+    <div class="bs">
+      <button class="btn" id="fgo" onclick="startSmart()">🚀 תרגל אותן</button>
+      <button class="btn sec" onclick="pickHardest()">🎲 בחר 10 הכי קשות</button>
+      <button class="btn sec" onclick="markShown(true)">☑️ סמן את כל המוצגות</button>
+      <button class="btn sec" onclick="if(confirm('להוריד את כל הסימונים?')){clearFocus();wordList()}">✕ נקה</button>
+    </div>
+  </div>
+  ${cats().length > 1 ? `<div class="filters">
+    <button class="${!wcat ? 'on' : ''}" onclick="wordList(null,'')">כל הנושאים</button>
+    ${cats().map((c,i) => `<button class="${wcat === c ? 'on' : ''}" onclick="wordList(null,cats()[${i}])">${esc(c)}</button>`).join('')}
+  </div>` : ''}
   <div class="filters">
-    ${[['all',`הכל (${st.total})`],['todo',`צריך ללמוד (${st.new+st.learning})`],['almost',`כמעט (${st.almost})`],['known',`יודע (${st.known})`]]
+    ${[['all',`הכל (${st.total})`],['focus',`🎯 מסומנות (${nFocusCat})`],['todo',`צריך ללמוד (${st.new+st.learning})`],['almost',`כמעט (${st.almost})`],['known',`יודע (${st.known})`]]
       .map(([k,t]) => `<button class="${wfilter===k?'on':''}" onclick="wordList('${k}')">${t}</button>`).join('')}
   </div>
   <div class="card">
-    ${ws.length ? ws.map((w,i) => { const l = peek(w)?.lvl || 0; return `<div class="wrow" data-i="${i}">
+    ${ws.length ? ws.map((w,i) => { const l = peek(w)?.lvl || 0, on = F().has(key(w.en)); return `<div class="wrow${on ? ' sel' : ''}" data-i="${i}">
+      <label class="ck" onclick="event.stopPropagation()"><input type="checkbox" data-i="${i}" ${on ? 'checked' : ''}></label>
       <div class="dots l${l}" title="${lbl[category(w)]}"><i></i><i></i><i></i><i></i><i></i></div>
       <div class="h">${esc(w.he)}</div><div class="e en">${esc(display(w.en))}</div><span>🔊</span></div>`; }).join('')
       : '<p style="text-align:center;color:var(--muted)">אין מילים כאן</p>'}
   </div>
-  <p style="color:#fff;opacity:.85;text-align:center;font-size:13px">הנקודות מראות כמה אתה יודע כל מילה (5 = יודע). לחץ על מילה כדי לשמוע.</p>`;
+  <p style="color:#fff;opacity:.85;text-align:center;font-size:13px">סמן ☑️ מילים כדי להתמקד רק בהן. הנקודות מראות כמה אתה יודע כל מילה (5 = יודע). לחץ על מילה כדי לשמוע.</p>`;
+  const upd = () => {
+    const n = focusWords().length;
+    $('#fcnt').innerHTML = n ? `🎯 נבחרו ${n} מילים — כל האפליקציה מתמקדת בהן` : '☑️ סמן מילים כדי להתמקד רק בהן';
+    $('#fgo').style.display = n ? '' : 'none';
+  };
+  upd();
   document.querySelectorAll('.wrow').forEach(r => r.onclick = () => speak(ws[+r.dataset.i].en));
+  document.querySelectorAll('.ck input').forEach(cb => cb.onchange = () => {
+    toggleFocus(key(ws[+cb.dataset.i].en), cb.checked);
+    cb.closest('.wrow').classList.toggle('sel', cb.checked);
+    upd();
+  });
+  wordList.shown = ws;
+}
+function markShown(on){
+  (wordList.shown || []).forEach(w => toggleFocus(key(w.en), on));
+  wordList();
+}
+function pickHardest(){
+  const sc = w => { const p = peek(w); if(!p || !p.seen) return 2.5; return (5 - p.lvl) + (p.bad - p.ok*0.3) * 0.5; };
+  const pool = allWords().filter(w => !wcat || w.cat === wcat).filter(w => category(w) !== 'known');
+  const list = shuffle(pool).sort((a,b) => sc(b) - sc(a)).slice(0, 10);
+  if(!list.length){ toast('אתה כבר יודע את כל המילים כאן! 🏆'); return; }
+  S.focus = list.map(w => key(w.en)); save();
+  toast(`🎯 נבחרו ${list.length} מילים`);
+  wordList('focus');
 }
 
 /* ================= הגדרות ================= */
@@ -1117,7 +1187,7 @@ function settings(){
   <div class="card set">
     <h3>🧹 איפוס</h3>
     <div class="hint">מוחק את כל ההתקדמות, הנקודות והשיאים (הרשימה נשארת).</div>
-    <button class="btn red" onclick="if(confirm('בטוח? כל ההתקדמות תימחק')){const c=S.customWords,st=S.settings,n=S.name;S=defaultState();S.customWords=c;S.settings=st;S.name=n;save();home();toast('ההתקדמות אופסה')}">אפס התקדמות</button>
+    <button class="btn red" onclick="if(confirm('בטוח? כל ההתקדמות תימחק')){const c=S.customWords,st=S.settings,n=S.name,f=S.focus;S=defaultState();S.customWords=c;S.settings=st;S.name=n;S.focus=f;save();home();toast('ההתקדמות אופסה')}">אפס התקדמות</button>
   </div>`;
   drawQR();
 }
