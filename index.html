@@ -111,6 +111,10 @@ button{font-family:inherit;cursor:pointer;border:none}
 .ck{display:flex;align-items:center;padding:4px}
 .ck input{width:26px;height:26px;accent-color:#ff4d8d;margin:0}
 .wrow.sel{background:#fff1f6;border-radius:12px}
+.ghead{display:flex;align-items:center;gap:10px;padding:0 4px 10px;border-bottom:3px solid var(--primary);margin-bottom:4px}
+.gtitle{font-size:20px;font-weight:800}
+.gsub{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:1px;text-align:right}
+.gcount{font-size:13px;color:var(--muted);white-space:nowrap}
 .flash{perspective:1000px;height:260px;margin-bottom:14px;cursor:pointer}
 .flash .in{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
 .flash.flipped .in{transform:rotateY(180deg)}
@@ -1065,8 +1069,7 @@ function wordList(f, c){
   const all = allWords(), order = {new:0, learning:1, almost:2, known:3};
   const inCat = all.filter(w => !wcat || w.cat === wcat);
   const st = stats(inCat), F = () => new Set(S.focus || []);
-  const Fs = F(), on = w => Fs.has(key(w.en)) ? 0 : 1;
-  let ws = inCat.slice().sort((a,b) => on(a) - on(b) || (peek(a)?.lvl||0) - (peek(b)?.lvl||0) || order[category(a)] - order[category(b)]);
+  let ws = inCat.slice(); // בסדר של הדף — מחולק לפי נושאים
   if(wfilter === 'focus') ws = ws.filter(w => F().has(key(w.en)));
   if(wfilter === 'todo') ws = ws.filter(w => ['new','learning'].includes(category(w)));
   if(wfilter === 'almost') ws = ws.filter(w => category(w) === 'almost');
@@ -1096,13 +1099,18 @@ function wordList(f, c){
      <span>מוצגות <b>${ws.length}</b> מתוך ${all.length} מילים</span><button class="btn sec" style="padding:8px 12px;font-size:14px" onclick="wordList('all','')">הצג את כולן</button></div>` : ''}
   ${S.customWords ? `<div class="card" style="padding:12px;font-size:14px">✏️ בטלפון הזה נשמרה רשימה שנערכה בהגדרות (${all.length} מילים) ולא הרשימה המלאה.
      <button class="btn sec" style="padding:8px 12px;font-size:14px;margin-top:8px" onclick="if(confirm('לחזור לרשימת המילים המלאה? ההתקדמות נשמרת.')){S.customWords=null;save();wordList('all','')}">↩️ חזור לרשימה המלאה</button></div>` : ''}
-  <div class="card">
-    ${ws.length ? ws.map((w,i) => { const l = peek(w)?.lvl || 0, on = F().has(key(w.en)); return `<div class="wrow${on ? ' sel' : ''}" data-i="${i}">
+  ${ws.length ? groupsOf(ws).map((g, gi) => `<div class="card wgroup">
+    <div class="ghead">
+      <label class="ck"><input type="checkbox" class="gck" data-g="${gi}"></label>
+      <div style="flex:1"><div class="gtitle">${esc(g.cat || 'מילים')}</div>${CAT_EN[g.cat] ? `<div class="gsub en">${CAT_EN[g.cat]}</div>` : ''}</div>
+      <div class="gcount" id="gc${gi}"></div>
+    </div>
+    ${g.items.map(({w,i}) => { const l = peek(w)?.lvl || 0, on = F().has(key(w.en)); return `<div class="wrow${on ? ' sel' : ''}" data-i="${i}">
       <label class="ck" onclick="event.stopPropagation()"><input type="checkbox" data-i="${i}" ${on ? 'checked' : ''}></label>
       <div class="dots l${l}" title="${lbl[category(w)]}"><i></i><i></i><i></i><i></i><i></i></div>
-      <div class="h">${esc(w.he)}</div><div class="e en">${esc(display(w.en))}</div><span>🔊</span></div>`; }).join('')
-      : '<p style="text-align:center;color:var(--muted)">אין מילים כאן</p>'}
-  </div>
+      <div class="h">${esc(w.he)}</div><div class="e en">${esc(display(w.en))}</div><span>🔊</span></div>`; }).join('')}
+  </div>`).join('')
+  : '<div class="card"><p style="text-align:center;color:var(--muted)">אין מילים כאן</p></div>'}
   <p style="color:#fff;opacity:.85;text-align:center;font-size:13px">סמן ☑️ מילים כדי להתמקד רק בהן. הנקודות מראות כמה אתה יודע כל מילה (5 = יודע). לחץ על מילה כדי לשמוע.</p>`;
   const upd = () => {
     const n = focusWords().length;
@@ -1111,12 +1119,35 @@ function wordList(f, c){
   };
   upd();
   document.querySelectorAll('.wrow').forEach(r => r.onclick = () => speak(ws[+r.dataset.i].en));
-  document.querySelectorAll('.ck input').forEach(cb => cb.onchange = () => {
+  const groups = groupsOf(ws);
+  const updGroups = () => groups.forEach((g, gi) => {
+    const n = g.items.filter(({w}) => F().has(key(w.en))).length;
+    const gc = document.querySelector('.gck[data-g="' + gi + '"]');
+    gc.checked = n === g.items.length; gc.indeterminate = n > 0 && n < g.items.length;
+    $('#gc' + gi).textContent = `${n}/${g.items.length} מסומנות`;
+  });
+  updGroups();
+  document.querySelectorAll('.wrow .ck input').forEach(cb => cb.onchange = () => {
     toggleFocus(key(ws[+cb.dataset.i].en), cb.checked);
     cb.closest('.wrow').classList.toggle('sel', cb.checked);
-    upd();
+    upd(); updGroups();
+  });
+  // סימון/הסרה של נושא שלם
+  document.querySelectorAll('.gck').forEach(gc => gc.onchange = () => {
+    groups[+gc.dataset.g].items.forEach(({w, i}) => {
+      toggleFocus(key(w.en), gc.checked);
+      const cb = document.querySelector('.wrow .ck input[data-i="' + i + '"]');
+      cb.checked = gc.checked; cb.closest('.wrow').classList.toggle('sel', gc.checked);
+    });
+    upd(); updGroups();
   });
   wordList.shown = ws;
+}
+const CAT_EN = {'שמות עצם':'NOUNS', 'שמות עצם ופעלים':'NOUNS AND VERBS', 'פעלים':'VERBS', 'תארים':'ADJECTIVES', 'אחר':'OTHER'};
+function groupsOf(ws){
+  const gs = [];
+  ws.forEach((w, i) => { const c = w.cat || ''; let g = gs.find(x => x.cat === c); if(!g) gs.push(g = {cat:c, items:[]}); g.items.push({w, i}); });
+  return gs;
 }
 function markShown(on){
   (wordList.shown || []).forEach(w => toggleFocus(key(w.en), on));
