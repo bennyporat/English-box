@@ -272,20 +272,34 @@ function touchDay(){
 
 /* ================= קול ואפקטים ================= */
 let voice = null;
+// קולות "צחוק" של אייפון/מק (שרים, מעוותים) — לא לבחור אותם
+const NOVELTY = /albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|organ|superstar|trinoids|whisper|wobble|zarvox|fred|junior|ralph|kathy|eddy|flo\b|grandma|grandpa|reed|rocko|sandy|shelley/i;
 function pickVoice(){
   if(!('speechSynthesis' in window)) return;
-  const vs = speechSynthesis.getVoices();
-  voice = vs.find(v => v.lang === 'en-US' && /google|samantha|natural/i.test(v.name)) || vs.find(v => v.lang === 'en-US') || vs.find(v => /^en/i.test(v.lang)) || null;
+  const L = v => String(v.lang).replace('_','-').toLowerCase();   // אנדרואיד לפעמים כותב en_US
+  const vs = speechSynthesis.getVoices().filter(v => /^en-/.test(L(v)) && !NOVELTY.test(v.name));
+  voice = null;
+  for(const r of [/google us english/i, /samantha/i, /aria|jenny|zira/i, /karen|daniel|moira|tessa|serena|alex/i]){
+    voice = vs.find(v => r.test(v.name) && /^en-(us|gb|au)/.test(L(v))); if(voice) break;
+  }
+  voice = voice || vs.find(v => L(v) === 'en-us' && v.localService) || vs.find(v => L(v) === 'en-us') || vs.find(v => L(v) === 'en-gb') || vs[0] || null;
 }
 if('speechSynthesis' in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
-function speak(text){
+// השמעה: כל השמעה חדשה מבטלת השמעה קודמת שעוד מחכה, כדי שלא תישמע מילה של שאלה קודמת
+let speakT;
+function stopSpeak(){ clearTimeout(speakT); try{ speechSynthesis.cancel(); }catch(e){} }
+function speak(text, delay = 0){
   if(!('speechSynthesis' in window)) return;
-  try{
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(display(text));
-    u.lang = 'en-US'; u.rate = 0.85; if(voice) u.voice = voice;
-    speechSynthesis.speak(u);
-  }catch(e){}
+  stopSpeak();
+  const go = () => {
+    try{
+      if(!voice) pickVoice();
+      const u = new SpeechSynthesisUtterance(display(text));
+      u.lang = voice ? voice.lang.replace('_','-') : 'en-US'; u.rate = 0.85; if(voice) u.voice = voice;
+      speechSynthesis.speak(u);
+    }catch(e){}
+  };
+  if(delay > 0) speakT = setTimeout(go, delay); else go(); // לחיצה על 🔊 — מיד (אייפון דורש שזה יקרה בתוך הלחיצה)
 }
 let AC;
 function beep(freqs, dur=0.12, type='sine', vol=0.15){
@@ -481,7 +495,7 @@ function home(){
     <button class="game" onclick="startMode('en2he')"><span class="ic">🎯</span><b>מה הפירוש?</b><small>אנגלית ← עברית</small></button>
     <button class="game" onclick="startMode('he2en')"><span class="ic">🔄</span><b>איך אומרים?</b><small>עברית ← אנגלית</small></button>
     <button class="game" onclick="startMode('listen')"><span class="ic">🔊</span><b>הקשב ובחר</b><small>שמיעה</small></button>
-    <button class="game" onclick="startMode('type')"><span class="ic">⌨️</span><b>איות</b><small>כתוב את המילה</small></button>
+    <button class="game" onclick="startMode('type')"><span class="ic">⌨️</span><b>איות</b><small>עברית ← כתוב באנגלית</small></button>
     <button class="game" onclick="startMatch()"><span class="ic">🧩</span><b>התאמה</b><small>מצא זוגות מהר</small></button>
     <button class="game" style="grid-column:span 2" onclick="startMode('say')"><span class="ic">🗣️</span><b>אמור או כתוב בעברית <span class="newtag">חדש!</span></b><small>רואים מילה באנגלית ועונים בעברית: בקול 🎤 או בכתיבה ⌨️</small></button>
   </div>
@@ -550,6 +564,7 @@ function options(w, field){
 
 function renderQ(){
   hideSheet();
+  stopSpeak();
   if(sess && sess.rec){ try{ sess.rec.abort(); }catch(e){} sess.rec = null; }
   const q = sess.queue[sess.i];
   if(!q) return endSession();
@@ -563,7 +578,7 @@ function renderQ(){
       <div class="word he" style="margin-top:14px;color:var(--primary)">${esc(w.he)}</div>
       <p class="tap">תסתכל, תקשיב, ותגיד אותה בקול 😊</p></div>
       <button class="btn wide" onclick="introNext()">הבנתי, יאללה! ←</button>`;
-    if(S.settings.autospeak) setTimeout(() => speak(w.en), 250);
+    if(S.settings.autospeak) speak(w.en, 250);
   }
   else if(q.type === 'flash'){
     body = `<div class="flash" id="fc" onclick="flip()"><div class="in">
@@ -576,7 +591,7 @@ function renderQ(){
         <button class="btn red" onclick="flashAns(false)">😅 עוד לא</button>
         <button class="btn" style="background:var(--ok)" onclick="flashAns(true)">😎 ידעתי</button>
       </div>`;
-    if(S.settings.autospeak) setTimeout(() => speak(w.en), 250);
+    if(S.settings.autospeak) speak(w.en, 250);
   }
   else if(q.type === 'en2he' || q.type === 'listen'){
     sess.opts = options(w, 'he'); sess.answer = w.he;
@@ -584,7 +599,7 @@ function renderQ(){
       ? `<div class="card prompt"><div class="lbl">הקשב — מה הפירוש?</div><button class="say huge" onclick="speak(sess.queue[sess.i].w.en)">🔊</button></div>`
       : `<div class="card prompt"><div class="lbl">מה הפירוש של:</div><div class="word en">${esc(display(w.en))}</div>${say}</div>`;
     body = head + `<div class="opts">${sess.opts.map((o,i) => `<button class="opt" onclick="pick(${i})">${esc(o)}</button>`).join('')}</div>`;
-    if(q.type === 'listen' || S.settings.autospeak) setTimeout(() => speak(w.en), 250);
+    if(q.type === 'listen' || S.settings.autospeak) speak(w.en, 250);
   }
   else if(q.type === 'he2en'){
     sess.opts = options(w, 'en'); sess.answer = w.en;
@@ -614,7 +629,7 @@ function renderQ(){
         <button class="btn sec" onclick="heHint()">💡 רמז</button>
         <button class="btn sec" onclick="typeGiveUp()">🤷</button>
       </div></div>`;
-    if(S.settings.autospeak) setTimeout(() => speak(w.en), 250);
+    if(S.settings.autospeak) speak(w.en, 250);
   }
   app().innerHTML = topBar() + body;
   if(q.type === 'say'){ $('#ti').addEventListener('keydown', e => { if(e.key === 'Enter') checkSayTyped(); }); }
@@ -788,7 +803,7 @@ function afterAnswer(ok, q, isFlash=false, note=null){
   const pair = `<span class="en"><b>${esc(display(w.en))}</b></span> = ${esc(w.he)}`;
   const text = note ? `${note}<br>${pair}` : (ok ? (q.type === 'listen' || q.type === 'type' || q.type === 'say' ? pair : '') : `התשובה הנכונה: ${pair}`);
   showSheet(ok, `${ok ? '✅' : '💡'} ${title}`, text, !ok || isFlash ? 'המשך' : null);
-  if(!ok) setTimeout(() => speak(w.en), 300);
+  if(!ok) speak(w.en, 300);
   if(ok && !isFlash){ sess.auto = setTimeout(next, q.type === 'type' || q.type === 'listen' || q.type === 'say' ? 1600 : 1000); }
   if(isFlash && ok) sess.auto = setTimeout(next, 700);
 }
