@@ -481,7 +481,7 @@ function home(){
   ${focusOn() ? `<div class="card focusc">
       <div style="font-size:18px">🎯 <b>מתמקד ב-${focusWords().length} מילים שבחרת</b></div>
       <div style="color:var(--muted);font-size:13px;margin:4px 0 10px">כל התרגולים, המשחקים והמבחן — רק עליהן, שוב ושוב</div>
-      <div class="row2"><button class="btn" onclick="wordList('focus')">✏️ שנה מילים</button><button class="btn sec" onclick="if(confirm('לבטל את המיקוד ולחזור לכל המילים?')){clearFocus();home()}">✕ בטל מיקוד</button></div>
+      <div class="row2"><button class="btn" onclick="wordList('all','')">✏️ שנה מילים</button><button class="btn sec" onclick="if(confirm('לבטל את המיקוד ולחזור לכל המילים?')){clearFocus();home()}">✕ בטל מיקוד</button></div>
     </div>`
   : `${cats().length > 1 ? `<div class="filters">
     <button class="${!S.cat || !cats().includes(S.cat) ? 'on' : ''}" onclick="setCat('')">כל המילים (${allWords().length})</button>
@@ -525,9 +525,9 @@ function home(){
     <button class="game" onclick="startMatch()"><span class="ic">🧩</span><b>התאמה</b><small>מצא זוגות מהר</small></button>
     <button class="game" style="grid-column:span 2" onclick="startMode('say')"><span class="ic">🗣️</span><b>אמור או כתוב בעברית <span class="newtag">חדש!</span></b><small>רואים מילה באנגלית ועונים בעברית: בקול 🎤 או בכתיבה ⌨️</small></button>
   </div>
-  <button class="big" style="background:linear-gradient(135deg,#22c55e,#0ea5e9);box-shadow:0 10px 24px rgba(14,165,233,.35)" onclick="startTest()">📝 מבחן לדוגמה<small>${Math.min(TEST_LEN, ws.length)} שאלות — בדוק כמה אתה מוכן</small></button>`}
+  <button class="big" style="background:linear-gradient(135deg,#22c55e,#0ea5e9);box-shadow:0 10px 24px rgba(14,165,233,.35)" onclick="startTest()">📝 מבחן לדוגמה<small>${focusOn() ? ws.length : Math.min(TEST_LEN, ws.length)} שאלות — בדוק כמה אתה מוכן</small></button>`}
   <div class="row2">
-    <button class="ghost" onclick="wordList()">📚 המילים שלי</button>
+    <button class="ghost" onclick="wordList('all','')">📚 המילים שלי</button>
     <button class="ghost" onclick="settings()">⚙️ הגדרות</button>
   </div>
   <button class="ghost" style="width:100%;margin-top:12px" onclick="report()">📊 דוח התקדמות להורים</button>`;
@@ -561,7 +561,7 @@ function startMode(type){
   newSession(type, picked.map(w => ({w, type})));
 }
 function startTest(){
-  const ws = shuffle(words()).slice(0, TEST_LEN);
+  const ws = shuffle(words()).slice(0, focusOn() ? Infinity : TEST_LEN); // במיקוד — כל המילים שבחר
   const types = ['en2he','he2en', S.settings.spelling ? 'type' : 'listen'];
   newSession('test', ws.map((w,i) => ({w, type: types[i % types.length]})));
   sess.queue = shuffle(sess.queue);
@@ -1065,7 +1065,8 @@ function wordList(f, c){
   const all = allWords(), order = {new:0, learning:1, almost:2, known:3};
   const inCat = all.filter(w => !wcat || w.cat === wcat);
   const st = stats(inCat), F = () => new Set(S.focus || []);
-  let ws = inCat.slice().sort((a,b) => (peek(a)?.lvl||0) - (peek(b)?.lvl||0) || order[category(a)] - order[category(b)]);
+  const Fs = F(), on = w => Fs.has(key(w.en)) ? 0 : 1;
+  let ws = inCat.slice().sort((a,b) => on(a) - on(b) || (peek(a)?.lvl||0) - (peek(b)?.lvl||0) || order[category(a)] - order[category(b)]);
   if(wfilter === 'focus') ws = ws.filter(w => F().has(key(w.en)));
   if(wfilter === 'todo') ws = ws.filter(w => ['new','learning'].includes(category(w)));
   if(wfilter === 'almost') ws = ws.filter(w => category(w) === 'almost');
@@ -1079,8 +1080,8 @@ function wordList(f, c){
     <div class="bs">
       <button class="btn" id="fgo" onclick="startSmart()">🚀 תרגל אותן</button>
       <button class="btn sec" onclick="pickHardest()">🎲 בחר 10 הכי קשות</button>
-      <button class="btn sec" onclick="markShown(true)">☑️ סמן את כל המוצגות</button>
-      <button class="btn sec" onclick="if(confirm('להוריד את כל הסימונים?')){clearFocus();wordList()}">✕ נקה</button>
+      <button class="btn sec" onclick="markShown(true)">☑️ סמן הכל${wcat || wfilter !== 'all' ? ' (המוצגות)' : ''}</button>
+      <button class="btn sec" onclick="if(confirm('להוריד את כל הסימונים?')){clearFocus();wordList('all')}">✕ נקה</button>
     </div>
   </div>
   ${cats().length > 1 ? `<div class="filters">
@@ -1091,6 +1092,10 @@ function wordList(f, c){
     ${[['all',`הכל (${st.total})`],['focus',`🎯 מסומנות (${nFocusCat})`],['todo',`צריך ללמוד (${st.new+st.learning})`],['almost',`כמעט (${st.almost})`],['known',`יודע (${st.known})`]]
       .map(([k,t]) => `<button class="${wfilter===k?'on':''}" onclick="wordList('${k}')">${t}</button>`).join('')}
   </div>
+  ${ws.length < all.length ? `<div class="card" style="padding:12px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+     <span>מוצגות <b>${ws.length}</b> מתוך ${all.length} מילים</span><button class="btn sec" style="padding:8px 12px;font-size:14px" onclick="wordList('all','')">הצג את כולן</button></div>` : ''}
+  ${S.customWords ? `<div class="card" style="padding:12px;font-size:14px">✏️ בטלפון הזה נשמרה רשימה שנערכה בהגדרות (${all.length} מילים) ולא הרשימה המלאה.
+     <button class="btn sec" style="padding:8px 12px;font-size:14px;margin-top:8px" onclick="if(confirm('לחזור לרשימת המילים המלאה? ההתקדמות נשמרת.')){S.customWords=null;save();wordList('all','')}">↩️ חזור לרשימה המלאה</button></div>` : ''}
   <div class="card">
     ${ws.length ? ws.map((w,i) => { const l = peek(w)?.lvl || 0, on = F().has(key(w.en)); return `<div class="wrow${on ? ' sel' : ''}" data-i="${i}">
       <label class="ck" onclick="event.stopPropagation()"><input type="checkbox" data-i="${i}" ${on ? 'checked' : ''}></label>
@@ -1124,7 +1129,7 @@ function pickHardest(){
   if(!list.length){ toast('אתה כבר יודע את כל המילים כאן! 🏆'); return; }
   S.focus = list.map(w => key(w.en)); save();
   toast(`🎯 נבחרו ${list.length} מילים`);
-  wordList('focus');
+  wordList('all');
 }
 
 /* ================= הגדרות ================= */
