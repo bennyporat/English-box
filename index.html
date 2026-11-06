@@ -194,7 +194,7 @@ const COMFORT = ['לא נורא!','כמעט!','בפעם הבאה!','ככה לו�
 const defaultState = () => ({
   name:'', progress:{}, xp:0, streak:0, lastDay:'', today:{date:'',correct:0},
   customWords:null, settings:{spelling:true, autospeak:true, sound:true},
-  milestones:[], best:{test:0, match:0}
+  milestones:[], best:{test:0, match:0}, cat:''
 });
 let S = loadState();
 function loadState(){
@@ -218,11 +218,19 @@ function shuffle(a){ a = a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.
 const key = en => String(en).toLowerCase().trim();
 const display = en => String(en).split('/')[0].trim(); // הצגה: הגרסה הראשונה
 
-function words(){
+function allWords(){
   const list = S.customWords || window.WORDS || [];
   const seen = new Set();
   return list.filter(w => w && w.en && w.he && !seen.has(key(w.en)) && seen.add(key(w.en)));
 }
+function cats(){ const c = []; allWords().forEach(w => { if(w.cat && !c.includes(w.cat)) c.push(w.cat); }); return c; }
+// המילים לפי הנושא שנבחר (או כולן)
+function words(){
+  const all = allWords();
+  if(!S.cat || !cats().includes(S.cat)) return all;
+  return all.filter(w => w.cat === S.cat);
+}
+function setCat(c){ S.cat = c; save(); home(); }
 function prog(w){
   const k = key(w.en);
   return S.progress[k] || (S.progress[k] = {lvl:0, seen:0, ok:0, bad:0, last:0, lastBad:0});
@@ -235,9 +243,8 @@ function category(w){
   if(p.lvl >= 3) return 'almost';
   return 'learning';
 }
-function stats(){
-  const c = {new:0, learning:0, almost:0, known:0};
-  const ws = words(); ws.forEach(w => c[category(w)]++);
+function stats(ws = words()){
+  const c = {new:0, learning:0, almost:0, known:0}; ws.forEach(w => c[category(w)]++);
   c.total = ws.length;
   // "מוכנות למבחן": שקלול של מה שהוא יודע וכמעט יודע
   let pts = 0; ws.forEach(w => { const p = peek(w); pts += p ? Math.min(p.lvl,5)/5 : 0; });
@@ -350,7 +357,7 @@ function grade(w, ok, kind){
   checkMilestones();
 }
 function checkMilestones(){
-  const st = stats(); if(!st.total) return;
+  const st = stats(allWords()); if(!st.total) return;
   const pct = Math.round(st.known / st.total * 100);
   for(const m of [10,25,50,75,100]){
     if(pct >= m && !S.milestones.includes(m)){
@@ -418,12 +425,16 @@ function home(){
     <h1>היי${S.name ? ' ' + esc(S.name) : ''}! 👋</h1>
     <p>${['בוא נלמד כמה מילים','כל יום קצת — ומגיעים רחוק','מוכן לאתגר?'][new Date().getDate()%3]}</p>
   </div>
+  ${cats().length > 1 ? `<div class="filters">
+    <button class="${!S.cat || !cats().includes(S.cat) ? 'on' : ''}" onclick="setCat('')">כל המילים (${allWords().length})</button>
+    ${cats().map((c,i) => `<button class="${S.cat === c ? 'on' : ''}" onclick="setCat(cats()[${i}])">${esc(c)} (${allWords().filter(w => w.cat === c).length})</button>`).join('')}
+  </div>` : ''}
   ${!S.name ? `<div class="card set"><b>איך קוראים לך?</b>
      <div style="display:flex;gap:8px;margin-top:10px"><input type="text" id="nm" placeholder="השם שלך"><button class="btn" onclick="setName()">שמור</button></div></div>` : ''}
   <div class="card">
     <div class="ready">
       <div class="ring" style="--p:${st.ready}"><div>${st.ready}%</div></div>
-      <div><h2>מוכנות למבחן</h2><p>${msg}</p></div>
+      <div><h2>מוכנות למבחן${S.cat && cats().includes(S.cat) ? ' — ' + esc(S.cat) : ''}</h2><p>${msg}</p></div>
     </div>
     <div class="stack">
       <div style="width:${pc('known')}%;background:var(--known)"></div>
@@ -834,13 +845,21 @@ function wordList(f){
 }
 
 /* ================= הגדרות ================= */
-function wordsToText(list){ return list.map(w => `${w.en} - ${w.he}`).join('\n'); }
+function wordsToText(list){
+  let cur = null; const out = [];
+  list.forEach(w => { if((w.cat || '') !== cur){ cur = w.cat || ''; if(cur){ if(out.length) out.push(''); out.push('# ' + cur); } } out.push(`${w.en} - ${w.he}`); });
+  return out.join('\n');
+}
 function parseWords(text){
   const HE = /[֐-׿]/, LAT = /[a-zA-Z]/;
-  const out = [];
+  const out = []; let cat = '';
   text.split(/\r?\n/).forEach(line => {
     line = line.trim().replace(/^\d+[.)]\s*/, '');
     if(!line) return;
+    // שורת כותרת: "# פעלים" או "*פעלים - VERBS*"
+    const hm = line.match(/^(?:#+\s*(.+)|\*+\s*(.+?)\s*\*+)$/);
+    if(hm){ cat = (hm[1] || hm[2]).split(/\s+[-–—]\s+/)[0].trim(); return; }
+    if(!LAT.test(line)) return; // שורה בלי אנגלית (למשל "אנגלית  עברית")
     let parts = null;
     const m = line.match(/^(.*?)\s*(?:\t|=|:|\s[-–—]\s|[-–—]\s|\s[-–—])\s*(.*)$/);
     if(m && m[1] && m[2]) parts = [m[1], m[2]];
@@ -851,7 +870,7 @@ function parseWords(text){
     if(!parts) return;
     let [a, b] = parts.map(s => s.trim());
     if(HE.test(a) && LAT.test(b) && !HE.test(b)) [a, b] = [b, a];
-    if(a && b) out.push({en:a, he:b});
+    if(a && b && LAT.test(a)) out.push(cat ? {cat, en:a, he:b} : {en:a, he:b});
   });
   return out;
 }
@@ -867,9 +886,9 @@ function settings(){
     <label class="tg">🎵 צלילים<input type="checkbox" ${s.sound?'checked':''} onchange="S.settings.sound=this.checked;save()"></label>
   </div>
   <div class="card set">
-    <h3>📝 רשימת המילים (${words().length})</h3>
-    <div class="hint">מילה בכל שורה: <b class="en">english - עברית</b>. אפשר גם להדביק רשימה מהמחברת/וואטסאפ.<br>כמה תשובות באנגלית: <span class="en">big/large - גדול</span><br>${S.customWords ? '✏️ כרגע בשימוש רשימה שנערכה כאן (ולא הקובץ words.js)' : '📄 כרגע בשימוש הרשימה מהקובץ words.js'}</div>
-    <textarea id="wl" dir="ltr">${esc(wordsToText(words()))}</textarea>
+    <h3>📝 רשימת המילים (${allWords().length})</h3>
+    <div class="hint">מילה בכל שורה: <b class="en">english - עברית</b>. אפשר גם להדביק רשימה מהמחברת/וואטסאפ.<br>כמה תשובות באנגלית: <span class="en">big/large - גדול</span><br>נושא: שורה שמתחילה ב-<b>#</b> (למשל <b># פעלים</b>)<br>${S.customWords ? '✏️ כרגע בשימוש רשימה שנערכה כאן (ולא הקובץ words.js)' : '📄 כרגע בשימוש הרשימה מהקובץ words.js'}</div>
+    <textarea id="wl" dir="ltr">${esc(wordsToText(allWords()))}</textarea>
     <div class="btns">
       <button class="btn" onclick="saveWords()">💾 שמור רשימה</button>
       ${S.customWords ? `<button class="btn sec" onclick="if(confirm('לחזור לרשימה מהקובץ words.js?')){S.customWords=null;save();settings();toast('חזרנו לרשימה מהקובץ')}">↩️ חזרה לקובץ</button>` : ''}
