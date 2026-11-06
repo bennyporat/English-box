@@ -95,6 +95,14 @@ button{font-family:inherit;cursor:pointer;border:none}
 .typebox input:focus{border-color:var(--primary)}
 .slots{direction:ltr;font-size:24px;letter-spacing:6px;color:var(--muted);margin:10px 0 14px;font-weight:700;word-break:break-all}
 .typebtns{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-top:12px}
+.mic{display:block;margin:6px auto 4px;width:96px;height:96px;border-radius:50%;font-size:44px;color:#fff;
+  background:linear-gradient(135deg,#ff7a59,#ff4d8d);box-shadow:0 10px 24px rgba(255,77,141,.4)}
+.mic.rec{animation:pulse 1s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,77,141,.6)}100%{box-shadow:0 0 0 22px rgba(255,77,141,0)}}
+.heard{min-height:24px;color:var(--muted);font-size:15px;margin:6px 0 12px}
+.or{color:var(--muted);font-size:13px;margin:8px 0}
+.typebox input.he-in{direction:rtl}
+.newtag{background:#ff4d8d;color:#fff;font-size:11px;padding:2px 8px;border-radius:99px;vertical-align:middle;margin-right:4px}
 .flash{perspective:1000px;height:260px;margin-bottom:14px;cursor:pointer}
 .flash .in{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
 .flash.flipped .in{transform:rotateY(180deg)}
@@ -475,6 +483,7 @@ function home(){
     <button class="game" onclick="startMode('listen')"><span class="ic">🔊</span><b>הקשב ובחר</b><small>שמיעה</small></button>
     <button class="game" onclick="startMode('type')"><span class="ic">⌨️</span><b>איות</b><small>כתוב את המילה</small></button>
     <button class="game" onclick="startMatch()"><span class="ic">🧩</span><b>התאמה</b><small>מצא זוגות מהר</small></button>
+    <button class="game" style="grid-column:span 2" onclick="startMode('say')"><span class="ic">🗣️</span><b>אמור או כתוב בעברית <span class="newtag">חדש!</span></b><small>רואים מילה באנגלית ועונים בעברית: בקול 🎤 או בכתיבה ⌨️</small></button>
   </div>
   <button class="big" style="background:linear-gradient(135deg,#22c55e,#0ea5e9);box-shadow:0 10px 24px rgba(14,165,233,.35)" onclick="startTest()">📝 מבחן לדוגמה<small>${Math.min(TEST_LEN, ws.length)} שאלות — בדוק כמה אתה מוכן</small></button>`}
   <div class="row2">
@@ -541,6 +550,7 @@ function options(w, field){
 
 function renderQ(){
   hideSheet();
+  if(sess && sess.rec){ try{ sess.rec.abort(); }catch(e){} sess.rec = null; }
   const q = sess.queue[sess.i];
   if(!q) return endSession();
   sess.locked = false; sess.hint = 0;
@@ -591,7 +601,23 @@ function renderQ(){
         <button class="btn sec" onclick="typeGiveUp()">🤷</button>
       </div></div>`;
   }
+  else if(q.type === 'say'){
+    sess.tries = 0;
+    body = `<div class="card prompt typebox"><div class="lbl">מה זה בעברית?</div><div class="word en">${esc(display(w.en))}</div>${say}
+      ${SR ? `<div style="margin-top:14px"><button class="mic" id="mic" onclick="listenHe()">🎤</button></div>
+        <div class="heard" id="heard">לחץ על המיקרופון ותגיד את המילה בעברית</div><div class="or">— או כתוב —</div>`
+           : `<div class="heard" id="heard"></div>`}
+      <div class="slots" id="slots" style="direction:rtl;display:none"></div>
+      <input id="ti" class="he-in" type="text" lang="he" dir="rtl" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="כתוב כאן בעברית…">
+      <div class="typebtns">
+        <button class="btn" onclick="checkSayTyped()">בדוק ✓</button>
+        <button class="btn sec" onclick="heHint()">💡 רמז</button>
+        <button class="btn sec" onclick="typeGiveUp()">🤷</button>
+      </div></div>`;
+    if(S.settings.autospeak) setTimeout(() => speak(w.en), 250);
+  }
   app().innerHTML = topBar() + body;
+  if(q.type === 'say'){ $('#ti').addEventListener('keydown', e => { if(e.key === 'Enter') checkSayTyped(); }); }
   if(q.type === 'type'){
     const ti = $('#ti');
     ti.addEventListener('keydown', e => { if(e.key === 'Enter') checkType(); });
@@ -674,6 +700,76 @@ function typeGiveUp(){
   afterAnswer(false, q);
 }
 
+/* --- עונים בעברית (קול או כתיבה) --- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const FINALS = {'ך':'כ','ם':'מ','ן':'נ','ף':'פ','ץ':'צ'};
+function normHe(s){
+  return String(s).replace(/[\u0591-\u05C7]/g,'').replace(/[ךםןףץ]/g, c => FINALS[c])
+    .replace(/[^\u05D0-\u05EA ]/g,' ').replace(/\s+/g,' ').trim();
+}
+function heVariants(he){
+  const out = new Set();
+  String(he).split(/[\/,]/).forEach(v => {
+    v = normHe(v); if(!v) return;
+    out.add(v);
+    out.add(v.replace(/ [א-ת]$/, ''));   // "להיות תלוי ב..." → גם "להיות תלוי"
+  });
+  return [...out].filter(Boolean);
+}
+function heMatch(he, ans){
+  const a = normHe(ans); if(!a) return false;
+  const strip = x => x.replace(/^ה(?=[א-ת]{2})/, ''); // "הכפר" = "כפר"
+  return heVariants(he).some(v => {
+    if(a === v || strip(a) === strip(v)) return true;
+    if((' ' + a + ' ').includes(' ' + v + ' ')) return true; // "זה כפר"
+    const d = lev(a, v);
+    return (v.length >= 4 && d <= 1) || (v.length >= 7 && d <= 2); // שגיאת כתיב קטנה
+  });
+}
+function heHint(){
+  if(sess.locked) return;
+  const first = String(sess.queue[sess.i].w.he).split('/')[0].trim();
+  const letters = [...first];
+  const nLetters = letters.filter(c => /[א-ת]/.test(c)).length;
+  sess.hint = Math.min(Math.max(1, nLetters - 1), sess.hint + 1);
+  let k = 0;
+  const shown = letters.map(c => { if(c === ' ') return '&nbsp;&nbsp;'; if(!/[א-ת]/.test(c)) return esc(c); return k++ < sess.hint ? esc(c) : '_'; }).join(' ');
+  const el = $('#slots'); el.innerHTML = shown; el.style.display = 'block'; el.style.color = 'var(--primary)';
+}
+function sayResult(answers, fromVoice){
+  if(!sess || sess.locked) return;
+  const q = sess.queue[sess.i]; if(!q || q.type !== 'say') return;
+  const ok = answers.some(a => heMatch(q.w.he, a));
+  if(!ok && fromVoice){
+    sess.tries++;
+    if(sess.tries < 2){ $('#heard').innerHTML = `שמעתי: "<b>${esc(answers[0])}</b>" — לא בדיוק. נסה שוב 🎤`; return; }
+  }
+  sess.locked = true;
+  const ti = $('#ti'); if(ti){ ti.style.borderColor = ok ? 'var(--ok)' : 'var(--bad)'; ti.blur(); }
+  grade(q.w, ok, ok && sess.hint ? 'hint' : 'choice');
+  afterAnswer(ok, q, false, fromVoice ? `🎤 שמעתי: "${esc(answers[0])}"` : null);
+}
+function checkSayTyped(){
+  const v = $('#ti').value.trim();
+  if(!v){ $('#ti').focus(); return; }
+  sayResult([v], false);
+}
+function listenHe(){
+  if(!SR || !sess || sess.locked) return;
+  if(sess.rec){ try{ sess.rec.stop(); }catch(e){} return; }
+  try{ speechSynthesis.cancel(); }catch(e){}
+  const r = new SR();
+  r.lang = 'he-IL'; r.interimResults = false; r.maxAlternatives = 5; r.continuous = false;
+  sess.rec = r;
+  const myI = sess.i, heard = () => (sess && sess.i === myI) ? $('#heard') : null;
+  $('#mic').classList.add('rec'); heard().textContent = '🎧 מקשיב… תגיד את המילה בעברית';
+  let got = false;
+  r.onresult = e => { got = true; const alts = [...e.results[0]].map(x => x.transcript); if(sess && sess.i === myI) sayResult(alts, true); };
+  r.onerror = e => { const h = heard(); if(h) h.textContent = e.error === 'not-allowed' || e.error === 'service-not-allowed' ? 'צריך לאשר גישה למיקרופון 🎤 (או לכתוב)' : e.error === 'no-speech' ? 'לא שמעתי כלום, נסה שוב' : 'לא הצלחתי לשמוע — נסה שוב או כתוב'; };
+  r.onend = () => { if(sess) sess.rec = null; const m = $('#mic'); if(m) m.classList.remove('rec'); const h = heard(); if(!got && h && h.textContent.startsWith('🎧')) h.textContent = 'לא שמעתי כלום, נסה שוב'; };
+  try{ r.start(); }catch(e){ sess.rec = null; $('#mic').classList.remove('rec'); }
+}
+
 /* --- משוב --- */
 function afterAnswer(ok, q, isFlash=false, note=null){
   sess.answered++;
@@ -690,10 +786,10 @@ function afterAnswer(ok, q, isFlash=false, note=null){
   let title = ok ? rnd(PRAISE) : rnd(COMFORT);
   if(ok && [3,5,10,15,20].includes(sess.combo)) title = `🔥 ${sess.combo} ברצף! ${rnd(PRAISE)}`;
   const pair = `<span class="en"><b>${esc(display(w.en))}</b></span> = ${esc(w.he)}`;
-  const text = note ? `${note}<br>${pair}` : (ok ? (q.type === 'listen' || q.type === 'type' ? pair : '') : `התשובה הנכונה: ${pair}`);
+  const text = note ? `${note}<br>${pair}` : (ok ? (q.type === 'listen' || q.type === 'type' || q.type === 'say' ? pair : '') : `התשובה הנכונה: ${pair}`);
   showSheet(ok, `${ok ? '✅' : '💡'} ${title}`, text, !ok || isFlash ? 'המשך' : null);
   if(!ok) setTimeout(() => speak(w.en), 300);
-  if(ok && !isFlash){ sess.auto = setTimeout(next, q.type === 'type' || q.type === 'listen' ? 1600 : 1000); }
+  if(ok && !isFlash){ sess.auto = setTimeout(next, q.type === 'type' || q.type === 'listen' || q.type === 'say' ? 1600 : 1000); }
   if(isFlash && ok) sess.auto = setTimeout(next, 700);
 }
 function showSheet(ok, title, text, btn){
