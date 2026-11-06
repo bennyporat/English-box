@@ -1,0 +1,912 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#5b4bff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>English Box</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg1:#6a5cff; --bg2:#9b5cff;
+  --card:#ffffff; --ink:#1f1d3a; --muted:#6f6c8f; --line:#ecebf7;
+  --primary:#5b4bff; --primary-d:#4335e0;
+  --ok:#22c55e; --ok-bg:#dcfce7; --bad:#ef4444; --bad-bg:#fee2e2;
+  --known:#22c55e; --almost:#facc15; --learning:#fb923c; --new:#d6d4e6;
+  --radius:22px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:#7d5cff;min-height:100%}
+body{margin:0;
+  font-family:'Rubik',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;
+  color:var(--ink);
+  background:linear-gradient(160deg,var(--bg1),var(--bg2)) no-repeat;
+  min-height:100vh;
+}
+#app{max-width:520px;margin:0 auto;padding:16px 16px calc(28px + env(safe-area-inset-bottom))}
+.en{direction:ltr;unicode-bidi:isolate;font-family:'Rubik',system-ui,sans-serif}
+button{font-family:inherit;cursor:pointer;border:none}
+.card{background:var(--card);border-radius:var(--radius);padding:18px;box-shadow:0 10px 30px rgba(30,20,90,.18);margin-bottom:14px}
+.hello{color:#fff;margin:6px 4px 14px}
+.hello h1{margin:0;font-size:26px;font-weight:800}
+.hello p{margin:4px 0 0;opacity:.9}
+
+/* progress card */
+.ready{display:flex;align-items:center;gap:16px}
+.ring{--p:0;width:96px;height:96px;border-radius:50%;flex:none;display:grid;place-items:center;
+  background:conic-gradient(var(--ok) calc(var(--p)*1%),#eeedf7 0)}
+.ring>div{width:76px;height:76px;border-radius:50%;background:#fff;display:grid;place-items:center;font-weight:800;font-size:22px}
+.ready h2{margin:0 0 4px;font-size:18px}
+.ready p{margin:0;color:var(--muted);font-size:14px;line-height:1.4}
+.stack{display:flex;height:16px;border-radius:99px;overflow:hidden;background:var(--new);margin:16px 0 10px}
+.stack>div{height:100%;transition:width .8s ease}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
+.legend span::before{content:'';display:inline-block;width:10px;height:10px;border-radius:50%;margin-left:5px;background:var(--c)}
+.legend b{color:var(--ink)}
+.chips{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.chip{background:rgba(255,255,255,.18);color:#fff;border-radius:16px;padding:10px 6px;text-align:center}
+.chip b{display:block;font-size:20px}
+.chip small{opacity:.9;font-size:12px}
+.goal{margin-top:12px;font-size:13px;color:var(--muted)}
+.bar{height:10px;background:#eeedf7;border-radius:99px;overflow:hidden;margin-top:6px}
+.bar>div{height:100%;background:linear-gradient(90deg,#fbbf24,#f97316);border-radius:99px;transition:width .6s}
+
+/* buttons */
+.big{width:100%;padding:20px;border-radius:var(--radius);font-size:22px;font-weight:800;color:#fff;
+  background:linear-gradient(135deg,#ff7a59,#ff4d8d);box-shadow:0 10px 24px rgba(255,77,141,.4);margin-bottom:14px;display:block}
+.big small{display:block;font-size:13px;font-weight:500;opacity:.95;margin-top:4px}
+.big:active,.game:active,.opt:active{transform:scale(.97)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.game{background:#fff;border-radius:20px;padding:16px 10px;text-align:center;box-shadow:0 6px 18px rgba(30,20,90,.15);transition:transform .1s}
+.game .ic{font-size:34px;display:block}
+.game b{display:block;font-size:16px;margin-top:6px}
+.game small{color:var(--muted);font-size:12px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ghost{background:rgba(255,255,255,.2);color:#fff;padding:14px;border-radius:16px;font-size:16px;font-weight:600}
+.btn{background:var(--primary);color:#fff;padding:14px 18px;border-radius:16px;font-size:17px;font-weight:700}
+.btn.sec{background:#eeedf7;color:var(--ink)}
+.btn.red{background:var(--bad)}
+.btn.wide{width:100%}
+
+/* quiz */
+.top{display:flex;align-items:center;gap:10px;margin-bottom:16px;color:#fff}
+.x{background:rgba(255,255,255,.2);color:#fff;width:40px;height:40px;border-radius:50%;font-size:18px;flex:none}
+.qbar{flex:1;height:14px;background:rgba(255,255,255,.25);border-radius:99px;overflow:hidden}
+.qbar>div{height:100%;background:#fff;border-radius:99px;transition:width .4s}
+.combo{font-weight:800;min-width:46px;text-align:center}
+.prompt{text-align:center;padding:26px 16px}
+.prompt .lbl{color:var(--muted);font-size:15px;margin-bottom:10px}
+.word{font-size:40px;font-weight:800;line-height:1.15;word-break:break-word}
+.word.he{font-size:36px}
+.say{background:#eeedf7;border-radius:50%;width:48px;height:48px;font-size:22px;margin-top:12px}
+.say.huge{width:110px;height:110px;font-size:52px;background:linear-gradient(135deg,#a78bfa,#6366f1);color:#fff;box-shadow:0 10px 24px rgba(99,102,241,.4)}
+.opts{display:grid;gap:10px}
+.opt{background:#fff;border-radius:18px;padding:18px 14px;font-size:21px;font-weight:600;color:var(--ink);
+  box-shadow:0 5px 14px rgba(30,20,90,.15);border:3px solid transparent;transition:transform .1s}
+.opt.right{background:var(--ok-bg);border-color:var(--ok)}
+.opt.wrong{background:var(--bad-bg);border-color:var(--bad);animation:shake .4s}
+.opt.dim{opacity:.55}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.typebox input{width:100%;font-size:26px;padding:14px;border-radius:16px;border:3px solid var(--line);text-align:center;font-family:inherit;direction:ltr;outline:none}
+.typebox input:focus{border-color:var(--primary)}
+.slots{direction:ltr;font-size:24px;letter-spacing:6px;color:var(--muted);margin:10px 0 14px;font-weight:700;word-break:break-all}
+.typebtns{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-top:12px}
+.flash{perspective:1000px;height:260px;margin-bottom:14px;cursor:pointer}
+.flash .in{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
+.flash.flipped .in{transform:rotateY(180deg)}
+.flash .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0}
+.flash .back{transform:rotateY(180deg)}
+.tap{color:var(--muted);font-size:14px;margin-top:14px}
+
+/* feedback sheet */
+.sheet{position:fixed;left:0;right:0;bottom:0;padding:18px 18px calc(20px + env(safe-area-inset-bottom));border-radius:26px 26px 0 0;
+  box-shadow:0 -10px 30px rgba(0,0,0,.2);transform:translateY(110%);transition:transform .25s ease;z-index:20}
+.sheet:not(.show){visibility:hidden;transition:transform .25s,visibility 0s .25s}
+.sheet.show{transform:translateY(0)}
+.sheet.ok{background:var(--ok-bg)} .sheet.bad{background:var(--bad-bg)}
+.sheet .inner{max-width:520px;margin:0 auto}
+.sheet h3{margin:0 0 6px;font-size:24px}
+.sheet.ok h3{color:#15803d} .sheet.bad h3{color:#b91c1c}
+.sheet p{margin:0 0 12px;font-size:18px}
+.sheet .btn{width:100%}
+.sheet.ok .btn{background:var(--ok)} .sheet.bad .btn{background:var(--bad)}
+
+/* match */
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mcol{display:grid;gap:10px}
+.mbtn{background:#fff;border-radius:16px;padding:16px 8px;font-size:18px;font-weight:600;min-height:62px;box-shadow:0 4px 12px rgba(30,20,90,.15);border:3px solid transparent;transition:all .2s;color:var(--ink)}
+.mbtn.sel{border-color:var(--primary);background:#eef0ff}
+.mbtn.done{visibility:hidden}
+.mbtn.wrong{border-color:var(--bad);background:var(--bad-bg);animation:shake .4s}
+.mbtn.good{border-color:var(--ok);background:var(--ok-bg)}
+.timer{color:#fff;text-align:center;font-size:18px;font-weight:700;margin-bottom:12px}
+
+/* summary */
+.sum{text-align:center}
+.sum .emo{font-size:72px;line-height:1}
+.sum h2{margin:10px 0 4px;font-size:26px}
+.sum .score{font-size:56px;font-weight:800;color:var(--primary)}
+.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}
+.kv div{background:#f5f4fc;border-radius:14px;padding:10px 4px}
+.kv b{display:block;font-size:22px}
+.kv small{color:var(--muted);font-size:12px}
+.wlist{text-align:right;margin:10px 0}
+.wlist div{display:flex;justify-content:space-between;padding:8px 4px;border-bottom:1px solid var(--line)}
+
+/* words list */
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.filters button{background:rgba(255,255,255,.2);color:#fff;padding:8px 12px;border-radius:99px;font-size:14px}
+.filters button.on{background:#fff;color:var(--primary);font-weight:700}
+.wrow{display:flex;align-items:center;gap:10px;padding:12px 4px;border-bottom:1px solid var(--line)}
+.wrow:last-child{border:none}
+.wrow .e{font-weight:700;font-size:18px;flex:1;text-align:left}
+.wrow .h{flex:1;color:var(--muted)}
+.dots{display:flex;gap:3px;direction:ltr}
+.dots i{width:8px;height:8px;border-radius:50%;background:#e5e4f0}
+.dots.l1 i:nth-child(-n+1),.dots.l2 i:nth-child(-n+2){background:var(--learning)}
+.dots.l3 i:nth-child(-n+3),.dots.l4 i:nth-child(-n+4){background:var(--almost)}
+.dots.l5 i{background:var(--known)}
+
+/* settings */
+.set h3{margin:0 0 10px}
+.set label.tg{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:16px}
+.set label.tg:last-of-type{border:none}
+.set input[type=checkbox]{width:22px;height:22px;accent-color:var(--primary)}
+.set input[type=text],.set textarea{width:100%;font-family:inherit;font-size:16px;padding:12px;border-radius:14px;border:2px solid var(--line);outline:none}
+.set textarea{min-height:220px;direction:ltr;text-align:left;line-height:1.5}
+.set .hint{color:var(--muted);font-size:13px;margin:6px 0 10px;line-height:1.5}
+.set .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.qr{display:flex;justify-content:center;margin:10px 0}
+.qr svg{width:200px;height:200px}
+.url{direction:ltr;text-align:center;font-weight:700;font-size:18px;word-break:break-all}
+
+#toast{position:fixed;top:16px;left:50%;transform:translate(-50%,-150%);background:#1f1d3a;color:#fff;padding:12px 18px;border-radius:16px;
+  font-size:16px;z-index:50;transition:transform .3s;max-width:90vw;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+#toast.show{transform:translate(-50%,0)}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
+.modal{position:fixed;inset:0;background:rgba(20,10,60,.55);display:grid;place-items:center;z-index:40;padding:20px}
+.modal .card{max-width:400px;width:100%;text-align:center;animation:pop .35s}
+@keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+.pop{animation:pop .3s}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+<canvas id="confetti"></canvas>
+<script src="words.js"></script>
+<script>
+'use strict';
+/* ================= הגדרות ================= */
+const STORE_KEY = 'englishbox_v1';
+const SESSION_WORDS = 10;   // כמה מילים בכל סבב "תרגול חכם"
+const TEST_LEN = 20;        // כמה שאלות במבחן
+const DAILY_GOAL = 30;      // יעד יומי של תשובות נכונות
+const MATCH_PAIRS = 6;
+const PRAISE = ['מצוין!','אלוף!','יפה מאוד!','בדיוק!','וואו!','מושלם!','כל הכבוד!','תותח!','מדהים!'];
+const COMFORT = ['לא נורא!','כמעט!','בפעם הבאה!','ככה לומדים!'];
+
+/* ================= מצב ושמירה ================= */
+const defaultState = () => ({
+  name:'', progress:{}, xp:0, streak:0, lastDay:'', today:{date:'',correct:0},
+  customWords:null, settings:{spelling:true, autospeak:true, sound:true},
+  milestones:[], best:{test:0, match:0}
+});
+let S = loadState();
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){
+      const s = JSON.parse(raw), d = defaultState();
+      return {...d, ...s, settings:{...d.settings, ...(s.settings||{})}, today:{...d.today, ...(s.today||{})}, best:{...d.best, ...(s.best||{})}};
+    }
+  }catch(e){}
+  return defaultState();
+}
+function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(S)); }catch(e){} }
+
+/* ================= עזרים ================= */
+const $ = s => document.querySelector(s);
+const app = () => $('#app');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rnd = a => a[Math.floor(Math.random()*a.length)];
+function shuffle(a){ a = a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+const key = en => String(en).toLowerCase().trim();
+const display = en => String(en).split('/')[0].trim(); // הצגה: הגרסה הראשונה
+
+function words(){
+  const list = S.customWords || window.WORDS || [];
+  const seen = new Set();
+  return list.filter(w => w && w.en && w.he && !seen.has(key(w.en)) && seen.add(key(w.en)));
+}
+function prog(w){
+  const k = key(w.en);
+  return S.progress[k] || (S.progress[k] = {lvl:0, seen:0, ok:0, bad:0, last:0, lastBad:0});
+}
+const peek = w => S.progress[key(w.en)];
+function category(w){
+  const p = peek(w);
+  if(!p || !p.seen) return 'new';
+  if(p.lvl >= 5) return 'known';
+  if(p.lvl >= 3) return 'almost';
+  return 'learning';
+}
+function stats(){
+  const c = {new:0, learning:0, almost:0, known:0};
+  const ws = words(); ws.forEach(w => c[category(w)]++);
+  c.total = ws.length;
+  // "מוכנות למבחן": שקלול של מה שהוא יודע וכמעט יודע
+  let pts = 0; ws.forEach(w => { const p = peek(w); pts += p ? Math.min(p.lvl,5)/5 : 0; });
+  c.ready = c.total ? Math.round(pts / c.total * 100) : 0;
+  return c;
+}
+function dayStr(d = new Date()){ return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+function touchDay(){
+  const t = dayStr();
+  if(S.lastDay !== t){
+    const y = new Date(); y.setDate(y.getDate()-1);
+    S.streak = (S.lastDay === dayStr(y)) ? S.streak + 1 : 1;
+    S.lastDay = t;
+  }
+  if(S.today.date !== t) S.today = {date:t, correct:0};
+}
+
+/* ================= קול ואפקטים ================= */
+let voice = null;
+function pickVoice(){
+  if(!('speechSynthesis' in window)) return;
+  const vs = speechSynthesis.getVoices();
+  voice = vs.find(v => v.lang === 'en-US' && /google|samantha|natural/i.test(v.name)) || vs.find(v => v.lang === 'en-US') || vs.find(v => /^en/i.test(v.lang)) || null;
+}
+if('speechSynthesis' in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function speak(text){
+  if(!('speechSynthesis' in window)) return;
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(display(text));
+    u.lang = 'en-US'; u.rate = 0.85; if(voice) u.voice = voice;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+let AC;
+function beep(freqs, dur=0.12, type='sine', vol=0.15){
+  if(!S.settings.sound) return;
+  try{
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = AC.currentTime;
+    freqs.forEach((f,i) => {
+      const o = AC.createOscillator(), g = AC.createGain();
+      o.type = type; o.frequency.value = f;
+      g.gain.setValueAtTime(vol, t0+i*dur);
+      g.gain.exponentialRampToValueAtTime(0.001, t0+(i+1)*dur);
+      o.connect(g).connect(AC.destination);
+      o.start(t0+i*dur); o.stop(t0+(i+1)*dur+0.02);
+    });
+  }catch(e){}
+}
+const sfx = {
+  ok: () => beep([660,880]),
+  bad: () => { beep([220,170],0.15,'square',0.05); if(navigator.vibrate) navigator.vibrate(120); },
+  win: () => beep([523,659,784,1047],0.13)
+};
+function toast(html, ms=2600){
+  const t = $('#toast'); t.innerHTML = html; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), ms);
+}
+function confetti(n=140){
+  const c = $('#confetti'), ctx = c.getContext('2d');
+  c.width = innerWidth; c.height = innerHeight;
+  const colors = ['#ff4d8d','#ffd23f','#22c55e','#5b4bff','#38bdf8','#fb923c'];
+  const ps = Array.from({length:n}, () => ({
+    x: Math.random()*c.width, y: -20 - Math.random()*c.height*0.5,
+    vx: (Math.random()-.5)*4, vy: 2 + Math.random()*4, r: 6 + Math.random()*6,
+    c: rnd(colors), a: Math.random()*6, va: (Math.random()-.5)*.3
+  }));
+  let t = 0; cancelAnimationFrame(confetti.raf);
+  (function step(){
+    ctx.clearRect(0,0,c.width,c.height);
+    ps.forEach(p => { p.x+=p.vx; p.y+=p.vy; p.vy+=0.04; p.a+=p.va;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a); ctx.fillStyle=p.c; ctx.fillRect(-p.r/2,-p.r/4,p.r,p.r/2); ctx.restore(); });
+    if(++t < 240) confetti.raf = requestAnimationFrame(step); else ctx.clearRect(0,0,c.width,c.height);
+  })();
+}
+function modal(html){
+  const m = document.createElement('div'); m.className = 'modal';
+  m.innerHTML = `<div class="card">${html}<button class="btn wide" style="margin-top:14px">יאללה! 💪</button></div>`;
+  m.querySelector('button').onclick = () => m.remove();
+  document.body.appendChild(m);
+}
+
+/* ================= ציון והתקדמות ================= */
+// רמות: 0 = חדשה, 1-2 = לומד, 3-4 = כמעט, 5 = יודע
+// kind: choice (בחירה) | type (כתיבה) | hint (כתיבה עם רמז) | flash (כרטיסיה) | match (התאמה)
+function grade(w, ok, kind){
+  const p = prog(w), before = category(w);
+  p.seen++; p.last = Date.now();
+  touchDay();
+  if(ok){
+    p.ok++;
+    let cap = 5;
+    if(kind === 'choice') cap = S.settings.spelling ? 4 : 5; // כדי "לדעת" מילה צריך גם לכתוב אותה
+    if(kind === 'flash') cap = 2;
+    if(kind === 'match') cap = 3;
+    if(kind === 'hint') cap = p.lvl;
+    if(p.lvl < cap) p.lvl++;
+    S.xp += kind === 'type' ? 15 : 10;
+    S.today.correct++;
+    if(S.today.correct === DAILY_GOAL){ setTimeout(() => { confetti(); sfx.win(); toast('🏆 השלמת את היעד היומי! אלוף!'); }, 600); }
+  }else{
+    p.bad++; p.lastBad = Date.now();
+    p.lvl = Math.max(0, p.lvl - (kind === 'flash' ? 1 : 2));
+  }
+  if(category(w) === 'known' && before !== 'known'){
+    setTimeout(() => toast(`⭐ כבשת מילה חדשה: <b class="en">${esc(display(w.en))}</b>`), 300);
+  }
+  save();
+  checkMilestones();
+}
+function checkMilestones(){
+  const st = stats(); if(!st.total) return;
+  const pct = Math.round(st.known / st.total * 100);
+  for(const m of [10,25,50,75,100]){
+    if(pct >= m && !S.milestones.includes(m)){
+      S.milestones.push(m); save();
+      setTimeout(() => {
+        confetti(220); sfx.win();
+        modal(m === 100
+          ? `<div style="font-size:70px">🏆</div><h2>אתה יודע את כל המילים!</h2><p>אתה מוכן למבחן. גאווה גדולה!</p>`
+          : `<div style="font-size:70px">🎉</div><h2>אתה כבר יודע ${m}% מהמילים!</h2><p>${st.known} מתוך ${st.total} מילים. ממשיכים ככה!</p>`);
+      }, 900);
+      break;
+    }
+  }
+}
+
+/* ================= בחירת מילים חכמה ================= */
+function weightOf(w){
+  const p = peek(w);
+  if(!p || !p.seen) return 3;             // מילה חדשה
+  if(p.lvl >= 5) return 0.5;              // יודע — חזרה מדי פעם
+  let wt = (6 - p.lvl) * 1.6;             // ככה שפחות יודע => יותר סיכוי
+  if(p.lastBad && Date.now() - p.lastBad < 3*864e5) wt += 4; // טעה לאחרונה
+  return wt;
+}
+function pickWords(n, maxNew=4){
+  const pool = words(), res = []; let newCount = 0;
+  while(res.length < n && pool.length){
+    const ws = pool.map(w => { const isNew = !(peek(w)?.seen); return (isNew && newCount >= maxNew) ? 0.0001 : weightOf(w); });
+    let r = Math.random() * ws.reduce((a,b) => a+b, 0), i = 0;
+    for(; i < ws.length; i++){ r -= ws[i]; if(r <= 0) break; }
+    if(i >= ws.length) i = ws.length - 1;
+    const w = pool.splice(i,1)[0];
+    if(!(peek(w)?.seen)) newCount++;
+    res.push(w);
+  }
+  return res;
+}
+function smartType(w){
+  const p = peek(w), sp = S.settings.spelling;
+  if(!p || !p.seen) return 'intro';
+  const l = p.lvl;
+  if(l <= 1) return rnd(['en2he','en2he','listen']);
+  if(l === 2) return rnd(['he2en','listen','en2he']);
+  if(l <= 4) return sp ? rnd(['type','type','he2en']) : rnd(['he2en','listen']);
+  return sp ? rnd(['type','he2en']) : rnd(['he2en','en2he','listen']);
+}
+
+/* ================= מסך הבית ================= */
+function home(){
+  sess = null; stopTimer();
+  const st = stats(), ws = words();
+  const pc = k => st.total ? (st[k]/st.total*100) : 0;
+  const left = st.total - st.known;
+  const goalPct = Math.min(100, S.today.date === dayStr() ? S.today.correct/DAILY_GOAL*100 : 0);
+  const todayCorrect = S.today.date === dayStr() ? S.today.correct : 0;
+  const streak = (S.lastDay === dayStr() || S.lastDay === (()=>{const y=new Date();y.setDate(y.getDate()-1);return dayStr(y);})()) ? S.streak : 0;
+  let msg;
+  if(!st.total) msg = 'אין עדיין מילים — הוסיפו בהגדרות';
+  else if(st.known === st.total) msg = 'אתה יודע את כל המילים! 🏆 תמשיך לחזור כדי לא לשכוח';
+  else if(st.new === st.total) msg = `${st.total} מילים מחכות לך. בוא נתחיל!`;
+  else msg = `יודע <b>${st.known}</b> מתוך ${st.total} מילים. עוד ${left} ואתה מוכן!`;
+
+  app().innerHTML = `
+  <div class="hello">
+    <h1>היי${S.name ? ' ' + esc(S.name) : ''}! 👋</h1>
+    <p>${['בוא נלמד כמה מילים','כל יום קצת — ומגיעים רחוק','מוכן לאתגר?'][new Date().getDate()%3]}</p>
+  </div>
+  ${!S.name ? `<div class="card set"><b>איך קוראים לך?</b>
+     <div style="display:flex;gap:8px;margin-top:10px"><input type="text" id="nm" placeholder="השם שלך"><button class="btn" onclick="setName()">שמור</button></div></div>` : ''}
+  <div class="card">
+    <div class="ready">
+      <div class="ring" style="--p:${st.ready}"><div>${st.ready}%</div></div>
+      <div><h2>מוכנות למבחן</h2><p>${msg}</p></div>
+    </div>
+    <div class="stack">
+      <div style="width:${pc('known')}%;background:var(--known)"></div>
+      <div style="width:${pc('almost')}%;background:var(--almost)"></div>
+      <div style="width:${pc('learning')}%;background:var(--learning)"></div>
+    </div>
+    <div class="legend">
+      <span style="--c:var(--known)">יודע <b>${st.known}</b></span>
+      <span style="--c:var(--almost)">כמעט <b>${st.almost}</b></span>
+      <span style="--c:var(--learning)">לומד <b>${st.learning}</b></span>
+      <span style="--c:var(--new)">חדשות <b>${st.new}</b></span>
+    </div>
+    <div class="goal">🎯 יעד יומי: ${todayCorrect}/${DAILY_GOAL} תשובות נכונות
+      <div class="bar"><div style="width:${goalPct}%"></div></div></div>
+  </div>
+  <div class="chips">
+    <div class="chip"><b>⭐ ${S.xp}</b><small>נקודות</small></div>
+    <div class="chip"><b>🔥 ${streak}</b><small>ימים ברצף</small></div>
+    <div class="chip"><b>🏅 ${S.best.test || '-'}</b><small>שיא במבחן</small></div>
+  </div>
+  ${ws.length < 4 ? `<div class="card">צריך לפחות 4 מילים כדי לשחק. הוסיפו מילים ב⚙️ הגדרות.</div>` : `
+  <button class="big" onclick="startSmart()">🚀 תרגול חכם<small>מתמקד במילים שעוד לא יודע</small></button>
+  <div class="grid">
+    <button class="game" onclick="startMode('flash')"><span class="ic">🃏</span><b>כרטיסיות</b><small>הפוך ובדוק את עצמך</small></button>
+    <button class="game" onclick="startMode('en2he')"><span class="ic">🎯</span><b>מה הפירוש?</b><small>אנגלית ← עברית</small></button>
+    <button class="game" onclick="startMode('he2en')"><span class="ic">🔄</span><b>איך אומרים?</b><small>עברית ← אנגלית</small></button>
+    <button class="game" onclick="startMode('listen')"><span class="ic">🔊</span><b>הקשב ובחר</b><small>שמיעה</small></button>
+    <button class="game" onclick="startMode('type')"><span class="ic">⌨️</span><b>איות</b><small>כתוב את המילה</small></button>
+    <button class="game" onclick="startMatch()"><span class="ic">🧩</span><b>התאמה</b><small>מצא זוגות מהר</small></button>
+  </div>
+  <button class="big" style="background:linear-gradient(135deg,#22c55e,#0ea5e9);box-shadow:0 10px 24px rgba(14,165,233,.35)" onclick="startTest()">📝 מבחן לדוגמה<small>${Math.min(TEST_LEN, ws.length)} שאלות — בדוק כמה אתה מוכן</small></button>`}
+  <div class="row2">
+    <button class="ghost" onclick="wordList()">📚 המילים שלי</button>
+    <button class="ghost" onclick="settings()">⚙️ הגדרות</button>
+  </div>`;
+  scrollTo(0,0);
+}
+function setName(){ const v = $('#nm').value.trim(); if(v){ S.name = v; save(); home(); } }
+
+/* ================= סבב שאלות ================= */
+let sess = null;
+function newSession(mode, queue){
+  const before = {};
+  words().forEach(w => before[key(w.en)] = peek(w)?.lvl || 0);
+  sess = {mode, queue, i:0, correct:0, wrong:0, combo:0, bestCombo:0, xp0:S.xp, before, known0:stats().known, wrongWords:new Map(), answered:0};
+  renderQ();
+}
+function startSmart(list){
+  const picked = list || pickWords(SESSION_WORDS);
+  const q = [];
+  shuffle(picked).forEach(w => q.push({w, type: smartType(w)}));
+  // אחרי היכרות עם מילה חדשה — שאלה עליה כמה צעדים אחר כך
+  for(let i = 0; i < q.length; i++){
+    if(q[i].type === 'intro' && !q[i].follow){
+      q[i].follow = true;
+      q.splice(Math.min(q.length, i + 3), 0, {w:q[i].w, type:'en2he', follow:true});
+    }
+  }
+  newSession('smart', q);
+}
+function startMode(type){
+  let picked = pickWords(SESSION_WORDS, 6);
+  newSession(type, picked.map(w => ({w, type})));
+}
+function startTest(){
+  const ws = shuffle(words()).slice(0, TEST_LEN);
+  const types = ['en2he','he2en', S.settings.spelling ? 'type' : 'listen'];
+  newSession('test', ws.map((w,i) => ({w, type: types[i % types.length]})));
+  sess.queue = shuffle(sess.queue);
+}
+
+function topBar(){
+  const pct = sess.queue.length ? sess.i / sess.queue.length * 100 : 0;
+  return `<div class="top"><button class="x" onclick="askExit()">✕</button>
+    <div class="qbar"><div style="width:${pct}%"></div></div>
+    <div class="combo">${sess.combo >= 2 ? '🔥' + sess.combo : (sess.i+1) + '/' + sess.queue.length}</div></div>`;
+}
+function askExit(){
+  if(sess && sess.answered > 0 && sess.i < sess.queue.length){
+    if(confirm('לצאת באמצע? ההתקדמות עד עכשיו נשמרה.')) { hideSheet(); home(); }
+  } else { hideSheet(); home(); }
+}
+function options(w, field){
+  const opts = [w[field]], seen = new Set([w[field].trim()]);
+  for(const o of shuffle(words())){
+    if(opts.length >= 4) break;
+    const v = o[field].trim();
+    if(key(o.en) !== key(w.en) && !seen.has(v)){ seen.add(v); opts.push(o[field]); }
+  }
+  return shuffle(opts);
+}
+
+function renderQ(){
+  hideSheet();
+  const q = sess.queue[sess.i];
+  if(!q) return endSession();
+  sess.locked = false; sess.hint = 0;
+  const w = q.w, say = `<button class="say" onclick="speak(sess.queue[sess.i].w.en)">🔊</button>`;
+  let body = '';
+  if(q.type === 'intro'){
+    body = `<div class="card prompt pop">
+      <div class="lbl">מילה חדשה! 🌱</div>
+      <div class="word en">${esc(display(w.en))}</div>${say}
+      <div class="word he" style="margin-top:14px;color:var(--primary)">${esc(w.he)}</div>
+      <p class="tap">תסתכל, תקשיב, ותגיד אותה בקול 😊</p></div>
+      <button class="btn wide" onclick="introNext()">הבנתי, יאללה! ←</button>`;
+    if(S.settings.autospeak) setTimeout(() => speak(w.en), 250);
+  }
+  else if(q.type === 'flash'){
+    body = `<div class="flash" id="fc" onclick="flip()"><div class="in">
+        <div class="card face prompt"><div class="lbl">אתה יודע מה זה?</div><div class="word en">${esc(display(w.en))}</div>
+          <div class="tap">👆 לחץ כדי להפוך</div></div>
+        <div class="card face back prompt"><div class="word en" style="font-size:26px;color:var(--muted)">${esc(display(w.en))}</div>
+          <div class="word he" style="color:var(--primary)">${esc(w.he)}</div></div>
+      </div></div>
+      <div id="fbtns" style="display:none" class="row2">
+        <button class="btn red" onclick="flashAns(false)">😅 עוד לא</button>
+        <button class="btn" style="background:var(--ok)" onclick="flashAns(true)">😎 ידעתי</button>
+      </div>`;
+    if(S.settings.autospeak) setTimeout(() => speak(w.en), 250);
+  }
+  else if(q.type === 'en2he' || q.type === 'listen'){
+    sess.opts = options(w, 'he'); sess.answer = w.he;
+    const head = q.type === 'listen'
+      ? `<div class="card prompt"><div class="lbl">הקשב — מה הפירוש?</div><button class="say huge" onclick="speak(sess.queue[sess.i].w.en)">🔊</button></div>`
+      : `<div class="card prompt"><div class="lbl">מה הפירוש של:</div><div class="word en">${esc(display(w.en))}</div>${say}</div>`;
+    body = head + `<div class="opts">${sess.opts.map((o,i) => `<button class="opt" onclick="pick(${i})">${esc(o)}</button>`).join('')}</div>`;
+    if(q.type === 'listen' || S.settings.autospeak) setTimeout(() => speak(w.en), 250);
+  }
+  else if(q.type === 'he2en'){
+    sess.opts = options(w, 'en'); sess.answer = w.en;
+    body = `<div class="card prompt"><div class="lbl">איך אומרים באנגלית:</div><div class="word he">${esc(w.he)}</div></div>
+      <div class="opts">${sess.opts.map((o,i) => `<button class="opt en" onclick="pick(${i})">${esc(display(o))}</button>`).join('')}</div>`;
+  }
+  else if(q.type === 'type'){
+    body = `<div class="card prompt typebox"><div class="lbl">כתוב באנגלית:</div><div class="word he">${esc(w.he)}</div>
+      <div class="slots" id="slots">${slots(w,0)}</div>
+      <input id="ti" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="type here…">
+      <div class="typebtns">
+        <button class="btn" onclick="checkType()">בדוק ✓</button>
+        <button class="btn sec" onclick="hint()">💡 רמז</button>
+        <button class="btn sec" onclick="typeGiveUp()">🤷</button>
+      </div></div>`;
+  }
+  app().innerHTML = topBar() + body;
+  if(q.type === 'type'){
+    const ti = $('#ti');
+    ti.addEventListener('keydown', e => { if(e.key === 'Enter') checkType(); });
+    setTimeout(() => ti.focus(), 50);
+  }
+  scrollTo(0,0);
+}
+
+function introNext(){
+  const q = sess.queue[sess.i], p = prog(q.w);
+  p.seen++; p.last = Date.now(); save();
+  sess.i++; renderQ();
+}
+function flip(){
+  const fc = $('#fc'); fc.classList.toggle('flipped');
+  $('#fbtns').style.display = 'grid';
+  if(fc.classList.contains('flipped')) speak(sess.queue[sess.i].w.en);
+}
+function flashAns(ok){
+  if(sess.locked) return; sess.locked = true;
+  const q = sess.queue[sess.i];
+  grade(q.w, ok, 'flash');
+  afterAnswer(ok, q, true);
+}
+function pick(i){
+  if(sess.locked) return; sess.locked = true;
+  const q = sess.queue[sess.i], ok = sess.opts[i] === sess.answer;
+  document.querySelectorAll('.opt').forEach((b,j) => {
+    if(sess.opts[j] === sess.answer) b.classList.add('right');
+    else if(j === i) b.classList.add('wrong');
+    else b.classList.add('dim');
+  });
+  grade(q.w, ok, 'choice');
+  afterAnswer(ok, q);
+}
+
+/* --- איות --- */
+function normEn(s){ return String(s).toLowerCase().replace(/[’‘`]/g,"'").replace(/[^a-z' ]/g,' ').replace(/\s+/g,' ').trim(); }
+function variants(en){
+  const out = new Set();
+  String(en).split('/').map(normEn).filter(Boolean).forEach(v => { out.add(v); out.add(v.replace(/^(to|a|an|the) /,'')); });
+  return [...out];
+}
+function lev(a,b){
+  const m = a.length, n = b.length, d = Array.from({length:m+1}, (_,i) => [i, ...Array(n).fill(0)]);
+  for(let j=1;j<=n;j++) d[0][j] = j;
+  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++) d[i][j] = Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1] + (a[i-1]===b[j-1]?0:1));
+  return d[m][n];
+}
+function slots(w, n){
+  const t = display(w.en).toLowerCase();
+  let k = 0;
+  return [...t].map(ch => { if(ch === ' ') return '&nbsp;&nbsp;'; const s = k < n ? esc(ch) : '_'; if(/[a-z]/.test(ch)) k++; return /[a-z]/.test(ch) ? s : esc(ch); }).join('');
+}
+function hint(){
+  if(sess.locked) return;
+  const w = sess.queue[sess.i].w, len = display(w.en).replace(/[^a-z]/gi,'').length;
+  sess.hint = Math.min(len - 1, sess.hint + 1);
+  $('#slots').innerHTML = slots(w, sess.hint);
+  $('#slots').style.color = 'var(--primary)';
+  $('#ti').focus();
+}
+function checkType(){
+  if(sess.locked) return;
+  const q = sess.queue[sess.i], val = normEn($('#ti').value);
+  if(!val){ $('#ti').focus(); return; }
+  const vs = variants(q.w.en), v2 = val.replace(/^(to|a|an|the) /,'');
+  const ok = vs.includes(val) || vs.includes(v2);
+  const near = !ok && vs.some(v => lev(v, val) === 1);
+  sess.locked = true;
+  $('#ti').style.borderColor = ok ? 'var(--ok)' : 'var(--bad)';
+  $('#ti').blur();
+  grade(q.w, ok, ok && sess.hint ? 'hint' : 'type');
+  afterAnswer(ok, q, false, near ? 'כמעט! רק אות אחת לא נכונה 🤏' : null);
+}
+function typeGiveUp(){
+  if(sess.locked) return; sess.locked = true;
+  const q = sess.queue[sess.i];
+  grade(q.w, false, 'type');
+  afterAnswer(false, q);
+}
+
+/* --- משוב --- */
+function afterAnswer(ok, q, isFlash=false, note=null){
+  sess.answered++;
+  if(ok){ sess.correct++; sess.combo++; sess.bestCombo = Math.max(sess.bestCombo, sess.combo); sfx.ok(); }
+  else {
+    sess.wrong++; sess.combo = 0; sfx.bad();
+    sess.wrongWords.set(key(q.w.en), q.w);
+    // בתרגול חכם — מילה שטעו בה חוזרת שוב בהמשך הסבב
+    if(sess.mode === 'smart' && !q.retry){
+      sess.queue.splice(Math.min(sess.queue.length, sess.i + 3), 0, {w:q.w, type: q.type === 'type' ? 'he2en' : 'en2he', retry:true});
+    }
+  }
+  const w = q.w;
+  let title = ok ? rnd(PRAISE) : rnd(COMFORT);
+  if(ok && [3,5,10,15,20].includes(sess.combo)) title = `🔥 ${sess.combo} ברצף! ${rnd(PRAISE)}`;
+  const pair = `<span class="en"><b>${esc(display(w.en))}</b></span> = ${esc(w.he)}`;
+  const text = note ? `${note}<br>${pair}` : (ok ? (q.type === 'listen' || q.type === 'type' ? pair : '') : `התשובה הנכונה: ${pair}`);
+  showSheet(ok, `${ok ? '✅' : '💡'} ${title}`, text, !ok || isFlash ? 'המשך' : null);
+  if(!ok) setTimeout(() => speak(w.en), 300);
+  if(ok && !isFlash){ sess.auto = setTimeout(next, q.type === 'type' || q.type === 'listen' ? 1600 : 1000); }
+  if(isFlash && ok) sess.auto = setTimeout(next, 700);
+}
+function showSheet(ok, title, text, btn){
+  let s = $('#sheet');
+  if(!s){ s = document.createElement('div'); s.id = 'sheet'; s.className = 'sheet'; document.body.appendChild(s); }
+  s.className = 'sheet ' + (ok ? 'ok' : 'bad');
+  s.innerHTML = `<div class="inner"><h3>${title}</h3>${text ? `<p>${text}</p>` : ''}<button class="btn" onclick="next()">${btn || 'המשך'}</button></div>`;
+  requestAnimationFrame(() => s.classList.add('show'));
+}
+function hideSheet(){ const s = $('#sheet'); if(s) s.classList.remove('show'); }
+function next(){ if(!sess) return; clearTimeout(sess.auto); if(!sess.locked && sess.queue[sess.i].type !== 'intro') return; sess.i++; renderQ(); }
+
+/* --- סיכום --- */
+function endSession(){
+  hideSheet();
+  const total = sess.correct + sess.wrong;
+  const pct = total ? Math.round(sess.correct / total * 100) : 100;
+  const st = stats();
+  let improved = 0;
+  words().forEach(w => { if((peek(w)?.lvl || 0) > (sess.before[key(w.en)] || 0)) improved++; });
+  const newKnown = st.known - sess.known0;
+  const isTest = sess.mode === 'test';
+  let emo = pct >= 90 ? '🏆' : pct >= 75 ? '🌟' : pct >= 55 ? '💪' : '🌱';
+  let head = pct >= 90 ? 'מושלם!' : pct >= 75 ? 'עבודה מצוינת!' : pct >= 55 ? 'יפה מאוד, ממשיכים!' : 'כל תרגול מקרב אותך!';
+  let newBest = false;
+  if(isTest && pct > (S.best.test || 0)){ S.best.test = pct; save(); newBest = true; }
+  if(pct >= 75 || newBest){ confetti(); sfx.win(); }
+  const wrongList = [...sess.wrongWords.values()];
+  app().innerHTML = `
+  <div class="card sum pop">
+    <div class="emo">${emo}</div>
+    <h2>${head}</h2>
+    ${isTest ? `<div class="score">${pct}</div><div style="color:var(--muted)">ציון במבחן${newBest ? ' — 🏅 שיא חדש!' : ''}</div>`
+             : `<p style="color:var(--muted);margin:0">ענית נכון על ${sess.correct} מתוך ${total}</p>`}
+    <div class="kv">
+      <div><b>+${S.xp - sess.xp0}</b><small>⭐ נקודות</small></div>
+      <div><b>${improved}</b><small>📈 מילים השתפרו</small></div>
+      <div><b>${sess.bestCombo}</b><small>🔥 רצף שיא</small></div>
+    </div>
+    ${newKnown > 0 ? `<p style="font-size:18px">⭐ למדת ${newKnown} מילים חדשות עד הסוף!</p>` : ''}
+    <div style="text-align:right;margin-top:6px;font-weight:700">מוכנות למבחן: ${st.ready}%</div>
+    <div class="stack" style="margin-top:6px">
+      <div style="width:${st.total ? st.known/st.total*100 : 0}%;background:var(--known)"></div>
+      <div style="width:${st.total ? st.almost/st.total*100 : 0}%;background:var(--almost)"></div>
+      <div style="width:${st.total ? st.learning/st.total*100 : 0}%;background:var(--learning)"></div>
+    </div>
+    <div class="legend" style="justify-content:center">
+      <span style="--c:var(--known)">יודע <b>${st.known}</b></span>
+      <span style="--c:var(--almost)">כמעט <b>${st.almost}</b></span>
+      <span style="--c:var(--learning)">לומד <b>${st.learning}</b></span>
+      <span style="--c:var(--new)">חדשות <b>${st.new}</b></span>
+    </div>
+    ${wrongList.length ? `<h3 style="margin:18px 0 4px;text-align:right">מילים לחזור עליהן:</h3>
+      <div class="wlist">${wrongList.map((w,i) => `<div data-wi="${i}"><span class="en"><b>${esc(display(w.en))}</b></span><span>${esc(w.he)}</span></div>`).join('')}</div>
+      <button class="btn wide" style="margin-top:8px" onclick="practiceWrong()">🎯 תרגל את המילים האלה</button>` : ''}
+  </div>
+  <button class="big" onclick="${sess.mode === 'smart' || sess.mode === 'test' ? 'startSmart()' : `startMode('${sess.mode}')`}">🚀 עוד סיבוב!</button>
+  <button class="ghost" style="width:100%" onclick="home()">🏠 לתפריט הראשי</button>`;
+  document.querySelectorAll('[data-wi]').forEach(d => d.onclick = () => speak(wrongList[+d.dataset.wi].en));
+  sess.done = true;
+  scrollTo(0,0);
+}
+function practiceWrong(){
+  const list = [...sess.wrongWords.values()];
+  const q = [];
+  list.forEach(w => q.push({w, type:'en2he'}));
+  shuffle(list).forEach(w => q.push({w, type: S.settings.spelling ? 'type' : 'he2en'}));
+  newSession('smart', q);
+}
+
+/* ================= משחק התאמה ================= */
+let match = null;
+function stopTimer(){ if(match && match.timer) clearInterval(match.timer); }
+function startMatch(){
+  stopTimer();
+  const seenHe = new Set();
+  const ws = pickWords(words().length, 3).filter(w => !seenHe.has(w.he.trim()) && seenHe.add(w.he.trim())).slice(0, MATCH_PAIRS);
+  match = {ws, left: shuffle(ws), right: shuffle(ws), sel:{}, done:new Set(), mistakes:new Set(), errors:0, t0:Date.now(), xp0:S.xp};
+  sess = null;
+  app().innerHTML = `
+    <div class="top"><button class="x" onclick="stopTimer();home()">✕</button>
+      <div class="qbar"><div id="mbar" style="width:0%"></div></div><div class="combo" id="mt">0:00</div></div>
+    <div class="timer">🧩 מצא את הזוגות!</div>
+    <div class="mgrid">
+      <div class="mcol">${match.right.map(w => `<button class="mbtn" data-side="he" data-k="${esc(key(w.en))}">${esc(w.he)}</button>`).join('')}</div>
+      <div class="mcol">${match.left.map(w => `<button class="mbtn en" data-side="en" data-k="${esc(key(w.en))}">${esc(display(w.en))}</button>`).join('')}</div>
+    </div>`;
+  document.querySelectorAll('.mbtn').forEach(b => b.onclick = () => matchTap(b));
+  match.timer = setInterval(() => { const s = Math.floor((Date.now()-match.t0)/1000); const el = $('#mt'); if(el) el.textContent = Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); }, 500);
+}
+function matchTap(b){
+  const side = b.dataset.side, k = b.dataset.k;
+  if(match.done.has(k) || match.busy) return;
+  if(side === 'en') speak(match.ws.find(w => key(w.en) === k).en);
+  document.querySelectorAll(`.mbtn[data-side="${side}"]`).forEach(x => x.classList.remove('sel'));
+  b.classList.add('sel'); match.sel[side] = b;
+  const a = match.sel.en, h = match.sel.he;
+  if(!a || !h) return;
+  match.sel = {};
+  const w = match.ws.find(x => key(x.en) === a.dataset.k);
+  if(a.dataset.k === h.dataset.k){
+    a.classList.add('good'); h.classList.add('good'); sfx.ok();
+    match.done.add(a.dataset.k);
+    grade(w, !match.mistakes.has(a.dataset.k), 'match');
+    match.busy = true;
+    setTimeout(() => { a.classList.add('done'); h.classList.add('done'); match.busy = false; }, 350);
+    $('#mbar').style.width = (match.done.size / match.ws.length * 100) + '%';
+    if(match.done.size === match.ws.length) setTimeout(matchEnd, 500);
+  }else{
+    a.classList.add('wrong'); h.classList.add('wrong'); sfx.bad();
+    match.errors++; match.mistakes.add(a.dataset.k); match.mistakes.add(h.dataset.k);
+    match.busy = true;
+    setTimeout(() => { a.classList.remove('wrong','sel'); h.classList.remove('wrong','sel'); match.busy = false; }, 450);
+  }
+}
+function matchEnd(){
+  stopTimer();
+  const secs = Math.round((Date.now() - match.t0) / 1000);
+  let best = false;
+  if(match.ws.length === MATCH_PAIRS && (!S.best.match || secs < S.best.match)){ S.best.match = secs; save(); best = true; }
+  if(match.errors === 0 || best){ confetti(); sfx.win(); }
+  app().innerHTML = `<div class="card sum pop">
+    <div class="emo">${match.errors === 0 ? '🏆' : '🧩'}</div>
+    <h2>${match.errors === 0 ? 'בלי אף טעות!' : 'סיימת!'}</h2>
+    <div class="kv">
+      <div><b>${secs}</b><small>⏱️ שניות</small></div>
+      <div><b>${match.errors}</b><small>❌ טעויות</small></div>
+      <div><b>${S.best.match || '-'}</b><small>🏅 שיא (שניות)</small></div>
+    </div>
+    ${best ? '<p style="font-size:18px">🏅 שיא חדש!</p>' : ''}
+  </div>
+  <button class="big" onclick="startMatch()">🧩 עוד סיבוב!</button>
+  <button class="ghost" style="width:100%" onclick="home()">🏠 לתפריט הראשי</button>`;
+}
+
+/* ================= רשימת המילים ================= */
+let wfilter = 'all';
+function wordList(f){
+  if(f) wfilter = f;
+  const st = stats();
+  const order = {new:0, learning:1, almost:2, known:3};
+  let ws = words().slice().sort((a,b) => (peek(a)?.lvl||0) - (peek(b)?.lvl||0) || order[category(a)] - order[category(b)]);
+  if(wfilter === 'todo') ws = ws.filter(w => ['new','learning'].includes(category(w)));
+  if(wfilter === 'almost') ws = ws.filter(w => category(w) === 'almost');
+  if(wfilter === 'known') ws = ws.filter(w => category(w) === 'known');
+  const lbl = {new:'חדשה', learning:'לומד', almost:'כמעט', known:'יודע ⭐'};
+  app().innerHTML = `
+  <div class="top"><button class="x" onclick="home()">→</button><h2 style="margin:0">📚 המילים שלי</h2></div>
+  <div class="filters">
+    ${[['all',`הכל (${st.total})`],['todo',`צריך ללמוד (${st.new+st.learning})`],['almost',`כמעט (${st.almost})`],['known',`יודע (${st.known})`]]
+      .map(([k,t]) => `<button class="${wfilter===k?'on':''}" onclick="wordList('${k}')">${t}</button>`).join('')}
+  </div>
+  <div class="card">
+    ${ws.length ? ws.map((w,i) => { const l = peek(w)?.lvl || 0; return `<div class="wrow" data-i="${i}">
+      <div class="dots l${l}" title="${lbl[category(w)]}"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="h">${esc(w.he)}</div><div class="e en">${esc(display(w.en))}</div><span>🔊</span></div>`; }).join('')
+      : '<p style="text-align:center;color:var(--muted)">אין מילים כאן</p>'}
+  </div>
+  <p style="color:#fff;opacity:.85;text-align:center;font-size:13px">הנקודות מראות כמה אתה יודע כל מילה (5 = יודע). לחץ על מילה כדי לשמוע.</p>`;
+  document.querySelectorAll('.wrow').forEach(r => r.onclick = () => speak(ws[+r.dataset.i].en));
+}
+
+/* ================= הגדרות ================= */
+function wordsToText(list){ return list.map(w => `${w.en} - ${w.he}`).join('\n'); }
+function parseWords(text){
+  const HE = /[֐-׿]/, LAT = /[a-zA-Z]/;
+  const out = [];
+  text.split(/\r?\n/).forEach(line => {
+    line = line.trim().replace(/^\d+[.)]\s*/, '');
+    if(!line) return;
+    let parts = null;
+    const m = line.match(/^(.*?)\s*(?:\t|=|:|\s[-–—]\s|[-–—]\s|\s[-–—])\s*(.*)$/);
+    if(m && m[1] && m[2]) parts = [m[1], m[2]];
+    else {
+      const m2 = line.match(/^([^֐-׿]+?)\s+([֐-׿].*)$/) || line.match(/^([֐-׿][^a-zA-Z]*?)\s+([a-zA-Z].*)$/);
+      if(m2) parts = [m2[1], m2[2]];
+    }
+    if(!parts) return;
+    let [a, b] = parts.map(s => s.trim());
+    if(HE.test(a) && LAT.test(b) && !HE.test(b)) [a, b] = [b, a];
+    if(a && b) out.push({en:a, he:b});
+  });
+  return out;
+}
+function settings(){
+  const s = S.settings;
+  app().innerHTML = `
+  <div class="top"><button class="x" onclick="home()">→</button><h2 style="margin:0">⚙️ הגדרות</h2></div>
+  <div class="card set">
+    <h3>👤 כללי</h3>
+    <div style="display:flex;gap:8px;margin-bottom:8px"><input type="text" id="nm" value="${esc(S.name)}" placeholder="שם"><button class="btn" onclick="S.name=$('#nm').value.trim();save();toast('נשמר ✓')">שמור</button></div>
+    <label class="tg">✍️ כולל תרגול איות (כתיבה באנגלית)<input type="checkbox" ${s.spelling?'checked':''} onchange="S.settings.spelling=this.checked;save()"></label>
+    <label class="tg">🔊 השמעת המילה אוטומטית<input type="checkbox" ${s.autospeak?'checked':''} onchange="S.settings.autospeak=this.checked;save()"></label>
+    <label class="tg">🎵 צלילים<input type="checkbox" ${s.sound?'checked':''} onchange="S.settings.sound=this.checked;save()"></label>
+  </div>
+  <div class="card set">
+    <h3>📝 רשימת המילים (${words().length})</h3>
+    <div class="hint">מילה בכל שורה: <b class="en">english - עברית</b>. אפשר גם להדביק רשימה מהמחברת/וואטסאפ.<br>כמה תשובות באנגלית: <span class="en">big/large - גדול</span><br>${S.customWords ? '✏️ כרגע בשימוש רשימה שנערכה כאן (ולא הקובץ words.js)' : '📄 כרגע בשימוש הרשימה מהקובץ words.js'}</div>
+    <textarea id="wl" dir="ltr">${esc(wordsToText(words()))}</textarea>
+    <div class="btns">
+      <button class="btn" onclick="saveWords()">💾 שמור רשימה</button>
+      ${S.customWords ? `<button class="btn sec" onclick="if(confirm('לחזור לרשימה מהקובץ words.js?')){S.customWords=null;save();settings();toast('חזרנו לרשימה מהקובץ')}">↩️ חזרה לקובץ</button>` : ''}
+    </div>
+  </div>
+  <div class="card set">
+    <h3>📱 פתיחה בטלפון</h3>
+    <div class="hint">סרקו את הקוד עם המצלמה של הטלפון (באותה רשת Wi-Fi):</div>
+    <div class="url">${esc(location.href.split('#')[0])}</div>
+    <div class="qr" id="qr"></div>
+    ${/localhost|127\.0\.0\.1|^file:/.test(location.href) ? '<div class="hint">⚠️ זו כתובת מקומית. בטלפון צריך את הכתובת שמודפסת בחלון של serve.py (מתחילה ב-192.168…)</div>' : ''}
+  </div>
+  <div class="card set">
+    <h3>🧹 איפוס</h3>
+    <div class="hint">מוחק את כל ההתקדמות, הנקודות והשיאים (הרשימה נשארת).</div>
+    <button class="btn red" onclick="if(confirm('בטוח? כל ההתקדמות תימחק')){const c=S.customWords,st=S.settings,n=S.name;S=defaultState();S.customWords=c;S.settings=st;S.name=n;save();home();toast('ההתקדמות אופסה')}">אפס התקדמות</button>
+  </div>`;
+  drawQR();
+}
+function saveWords(){
+  const list = parseWords($('#wl').value);
+  if(list.length < 4){ alert('לא זוהו מספיק מילים. צריך לפחות 4 שורות בפורמט: english - עברית'); return; }
+  S.customWords = list; save();
+  toast(`נשמרו ${list.length} מילים ✓`);
+  settings();
+}
+function drawQR(){
+  const el = $('#qr'); if(!el) return;
+  const go = () => { try{ const q = qrcode(0, 'M'); q.addData(location.href.split('#')[0]); q.make(); el.innerHTML = q.createSvgTag(5, 8); }catch(e){} };
+  if(window.qrcode) return go();
+  const sc = document.createElement('script');
+  sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
+  sc.onload = go; document.head.appendChild(sc);
+}
+
+/* ================= התחלה ================= */
+home();
+</script>
+</body>
+</html>
