@@ -194,7 +194,7 @@ const COMFORT = ['לא נורא!','כמעט!','בפעם הבאה!','ככה לו�
 const defaultState = () => ({
   name:'', progress:{}, xp:0, streak:0, lastDay:'', today:{date:'',correct:0},
   customWords:null, settings:{spelling:true, autospeak:true, sound:true},
-  milestones:[], best:{test:0, match:0}, cat:''
+  milestones:[], best:{test:0, match:0}, cat:'', days:{}, tests:[]
 });
 let S = loadState();
 function loadState(){
@@ -331,10 +331,21 @@ function modal(html){
 /* ================= ציון והתקדמות ================= */
 // רמות: 0 = חדשה, 1-2 = לומד, 3-4 = כמעט, 5 = יודע
 // kind: choice (בחירה) | type (כתיבה) | hint (כתיבה עם רמז) | flash (כרטיסיה) | match (התאמה)
+// יומן פעילות יומי (לדוח להורים): תשובות, נכונות, וזמן תרגול משוער
+function logDay(ok){
+  S.days = S.days || {};
+  const d = S.days[dayStr()] || (S.days[dayStr()] = {a:0, c:0, ms:0, t:0});
+  const now = Date.now();
+  if(d.t && now - d.t < 120000) d.ms += now - d.t; else d.ms += 8000; // הפסקה ארוכה לא נספרת
+  d.t = now; d.a++; if(ok) d.c++;
+  const keys = Object.keys(S.days);
+  if(keys.length > 60) keys.sort((a,b) => new Date(a) - new Date(b)).slice(0, keys.length - 60).forEach(k => delete S.days[k]);
+}
 function grade(w, ok, kind){
   const p = prog(w), before = category(w);
   p.seen++; p.last = Date.now();
   touchDay();
+  logDay(ok);
   if(ok){
     p.ok++;
     let cap = 5;
@@ -469,7 +480,8 @@ function home(){
   <div class="row2">
     <button class="ghost" onclick="wordList()">📚 המילים שלי</button>
     <button class="ghost" onclick="settings()">⚙️ הגדרות</button>
-  </div>`;
+  </div>
+  <button class="ghost" style="width:100%;margin-top:12px" onclick="report()">📊 דוח התקדמות להורים</button>`;
   scrollTo(0,0);
 }
 function setName(){ const v = $('#nm').value.trim(); if(v){ S.name = v; save(); home(); } }
@@ -707,7 +719,11 @@ function endSession(){
   let emo = pct >= 90 ? '🏆' : pct >= 75 ? '🌟' : pct >= 55 ? '💪' : '🌱';
   let head = pct >= 90 ? 'מושלם!' : pct >= 75 ? 'עבודה מצוינת!' : pct >= 55 ? 'יפה מאוד, ממשיכים!' : 'כל תרגול מקרב אותך!';
   let newBest = false;
-  if(isTest && pct > (S.best.test || 0)){ S.best.test = pct; save(); newBest = true; }
+  if(isTest){
+    S.tests = (S.tests || []).concat({d:Date.now(), score:pct, n:total, cat:(S.cat && cats().includes(S.cat)) ? S.cat : ''}).slice(-30);
+    if(pct > (S.best.test || 0)){ S.best.test = pct; newBest = true; }
+    save();
+  }
   if(pct >= 75 || newBest){ confetti(); sfx.win(); }
   const wrongList = [...sess.wrongWords.values()];
   app().innerHTML = `
@@ -815,6 +831,92 @@ function matchEnd(){
   </div>
   <button class="big" onclick="startMatch()">🧩 עוד סיבוב!</button>
   <button class="ghost" style="width:100%" onclick="home()">🏠 לתפריט הראשי</button>`;
+}
+
+
+/* ================= דוח להורים ================= */
+function fmtDate(t){ const d = new Date(t); return d.getDate() + '.' + (d.getMonth()+1); }
+function dayKeyAgo(n){ const d = new Date(); d.setDate(d.getDate() - n); return dayStr(d); }
+function hardWords(n=10){
+  return allWords().map(w => ({w, p:peek(w)})).filter(x => x.p && x.p.bad > 0 && x.p.lvl < 5)
+    .sort((a,b) => (b.p.bad - b.p.ok*0.5) - (a.p.bad - a.p.ok*0.5) || a.p.lvl - b.p.lvl).slice(0, n).map(x => x.w);
+}
+function reportData(){
+  const all = stats(allWords());
+  const byCat = cats().map(c => ({c, st:stats(allWords().filter(w => w.cat === c))}));
+  const days = S.days || {};
+  const last7 = [...Array(7)].map((_,i) => { const k = dayKeyAgo(6-i); const d = days[k] || {a:0,c:0,ms:0}; return {k, label: i === 6 ? 'היום' : fmtDate(Date.now() - (6-i)*864e5), ...d}; });
+  const week = last7.reduce((s,d) => ({a:s.a+d.a, c:s.c+d.c, ms:s.ms+d.ms, n:s.n+(d.a>0?1:0)}), {a:0,c:0,ms:0,n:0});
+  return {all, byCat, last7, week, today:last7[6], tests:(S.tests||[]).slice(-5).reverse(), hard:hardWords()};
+}
+const mins = ms => Math.max(0, Math.round(ms/60000));
+function reportText(){
+  const r = reportData(), a = r.all;
+  const L = [];
+  L.push(`📊 דוח English Box${S.name ? ' — ' + S.name : ''}`);
+  L.push(`📅 ${new Date().toLocaleDateString('he-IL')}`);
+  L.push('');
+  L.push(`🎯 מוכנות למבחן: ${a.ready}%`);
+  L.push(`✅ יודע: ${a.known} | 🟡 כמעט: ${a.almost} | 🟠 לומד: ${a.learning} | ⚪ עוד לא התחיל: ${a.new}  (מתוך ${a.total})`);
+  if(r.byCat.length > 1){ L.push(''); L.push('📚 לפי נושא:'); r.byCat.forEach(x => L.push(`• ${x.c}: ${x.st.ready}% (יודע ${x.st.known}/${x.st.total})`)); }
+  L.push('');
+  L.push(`🕐 היום: ${r.today.a} תשובות, ${r.today.c} נכונות, כ-${mins(r.today.ms)} דק'`);
+  L.push(`📈 7 ימים: תרגל ב-${r.week.n} ימים, ${r.week.a} תשובות (${r.week.a ? Math.round(r.week.c/r.week.a*100) : 0}% נכונות), כ-${mins(r.week.ms)} דק'`);
+  L.push(`🔥 ימים ברצף: ${S.streak || 0}`);
+  if(r.tests.length){ L.push(''); L.push('📝 מבחנים אחרונים:'); r.tests.forEach(t => L.push(`• ${fmtDate(t.d)}: ${t.score}${t.cat ? ' (' + t.cat + ')' : ''}`)); }
+  if(r.hard.length){ L.push(''); L.push('⚠️ מילים שקשות לו:'); L.push(r.hard.map(w => `${display(w.en)} (${w.he})`).join(', ')); }
+  return L.join('\n');
+}
+function report(){
+  const r = reportData(), a = r.all;
+  const maxA = Math.max(10, ...r.last7.map(d => d.a));
+  app().innerHTML = `
+  <div class="top"><button class="x" onclick="home()">→</button><h2 style="margin:0">📊 דוח התקדמות</h2></div>
+  <div class="card">
+    <div class="ready"><div class="ring" style="--p:${a.ready}"><div>${a.ready}%</div></div>
+      <div><h2>מוכנות למבחן</h2><p>יודע <b>${a.known}</b> · כמעט <b>${a.almost}</b> · לומד <b>${a.learning}</b> · חדשות <b>${a.new}</b><br>מתוך ${a.total} מילים</p></div></div>
+    ${r.byCat.length > 1 ? `<h3 style="margin:18px 0 6px">לפי נושא</h3>` + r.byCat.map(x => `
+      <div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:14px"><span>${esc(x.c)}</span><b>${x.st.ready}%</b></div>
+      <div class="bar"><div style="width:${x.st.ready}%;background:linear-gradient(90deg,#22c55e,#16a34a)"></div></div></div>`).join('') : ''}
+  </div>
+  <div class="card">
+    <h3 style="margin:0 0 10px">פעילות ב-7 ימים אחרונים</h3>
+    <div style="display:flex;align-items:flex-end;gap:6px;height:110px">
+      ${r.last7.map(d => `<div style="flex:1;text-align:center;font-size:11px;color:var(--muted)">
+        <div style="font-weight:700;color:var(--ink)">${d.a || ''}</div>
+        <div style="height:${Math.round(d.a/maxA*70)}px;min-height:3px;background:${d.a ? 'var(--primary)' : '#e5e4f0'};border-radius:6px 6px 0 0"></div>
+        <div>${d.label}</div></div>`).join('')}
+    </div>
+    <div class="kv">
+      <div><b>${r.week.n}/7</b><small>ימי תרגול</small></div>
+      <div><b>${r.week.a ? Math.round(r.week.c/r.week.a*100) : 0}%</b><small>תשובות נכונות</small></div>
+      <div><b>${mins(r.week.ms)}</b><small>דקות תרגול</small></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3 style="margin:0 0 6px">📝 מבחנים אחרונים</h3>
+    ${r.tests.length ? `<div class="wlist">${r.tests.map(t => `<div><span>${fmtDate(t.d)}${t.cat ? ' · ' + esc(t.cat) : ''}</span><b>${t.score}</b></div>`).join('')}</div>`
+      : '<p style="color:var(--muted);margin:0">עוד לא נעשה מבחן לדוגמה</p>'}
+  </div>
+  <div class="card">
+    <h3 style="margin:0 0 6px">⚠️ מילים שקשות לו</h3>
+    ${r.hard.length ? `<div class="wlist">${r.hard.map(w => `<div><span class="en"><b>${esc(display(w.en))}</b></span><span>${esc(w.he)}</span></div>`).join('')}</div>`
+      : '<p style="color:var(--muted);margin:0">אין עדיין — צריך לתרגל קצת קודם</p>'}
+  </div>
+  <button class="big" style="background:linear-gradient(135deg,#25d366,#128c7e);box-shadow:0 10px 24px rgba(18,140,126,.35)" onclick="shareReport()">📤 שלח את הדוח בוואטסאפ</button>
+  <button class="ghost" style="width:100%" onclick="copyReport()">📋 העתק את הדוח</button>`;
+  scrollTo(0,0);
+}
+function shareReport(){
+  const text = reportText();
+  if(navigator.share){ navigator.share({text}).catch(() => {}); }
+  else location.href = 'https://wa.me/?text=' + encodeURIComponent(text);
+}
+function copyReport(){
+  const text = reportText();
+  (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
+    .then(() => toast('הדוח הועתק ✓'))
+    .catch(() => { prompt('העתק את הדוח:', text); });
 }
 
 /* ================= רשימת המילים ================= */
