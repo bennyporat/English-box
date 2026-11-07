@@ -198,7 +198,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 <div id="app"></div>
 <div id="toast"></div>
 <canvas id="confetti"></canvas>
-<script src="words.js"></script>
+<script src="words.js?v=2026-11-07a"></script>
 <script>
 'use strict';
 /* ================= הגדרות ================= */
@@ -464,6 +464,7 @@ function smartType(w){
 /* ================= מסך הבית ================= */
 function home(){
   sess = null; stopTimer();
+  if(checkUpdate.pending){ const go = checkUpdate.pending; checkUpdate.pending = null; return go(); }
   const st = stats(), ws = words();
   const pc = k => st.total ? (st[k]/st.total*100) : 0;
   const left = st.total - st.known;
@@ -599,6 +600,7 @@ function renderQ(){
   if(sess && sess.rec){ try{ sess.rec.abort(); }catch(e){} sess.rec = null; }
   const q = sess.queue[sess.i];
   if(!q) return endSession();
+  if(q.type === 'type' && sess.mode !== 'type') q.type = 'he2en'; // איות באנגלית — רק בכפתור "איות"
   sess.locked = false; sess.hint = 0;
   const w = q.w, say = `<button class="say" onclick="speak(sess.queue[sess.i].w.en)">🔊</button>`;
   let body = '';
@@ -1221,6 +1223,7 @@ function settings(){
     ${/localhost|127\.0\.0\.1|^file:/.test(location.href) ? '<div class="hint">⚠️ זו כתובת מקומית. בטלפון צריך את הכתובת שמודפסת בחלון של serve.py (מתחילה ב-192.168…)</div>' : ''}
   </div>
   <div class="card set">
+    <div class="hint" style="text-align:center">גרסה: ${APP_VERSION}</div>
     <h3>🧹 איפוס</h3>
     <div class="hint">מוחק את כל ההתקדמות, הנקודות והשיאים (הרשימה נשארת).</div>
     <button class="btn red" onclick="if(confirm('בטוח? כל ההתקדמות תימחק')){const c=S.customWords,st=S.settings,n=S.name,f=S.focus;S=defaultState();S.customWords=c;S.settings=st;S.name=n;S.focus=f;save();home();toast('ההתקדמות אופסה')}">אפס התקדמות</button>
@@ -1244,6 +1247,25 @@ function drawQR(){
 }
 
 /* ================= התחלה ================= */
+/* ================= עדכון אוטומטי ================= */
+// כשיש גרסה חדשה באתר — טוענים אותה (הנתונים בטלפון לא נפגעים, הם שמורים בנפרד)
+const APP_VERSION = '2026-11-07a';
+function checkUpdate(){
+  if(!/^https?:/.test(location.protocol)) return;
+  fetch('version.json?t=' + Date.now(), {cache:'no-store'})
+    .then(r => r.ok ? r.json() : null)
+    .then(j => {
+      if(!j || !j.v || j.v === APP_VERSION) return;
+      let tried = ''; try{ tried = sessionStorage.getItem('eb_upd') || ''; }catch(e){}
+      if(tried === j.v) return;                         // לא להיתקע בלולאה
+      const go = () => { try{ sessionStorage.setItem('eb_upd', j.v); }catch(e){} location.replace(location.pathname + '?v=' + encodeURIComponent(j.v)); };
+      if(!sess || sess.done) go();                      // לא קוטעים באמצע סבב
+      else checkUpdate.pending = go;
+    }).catch(() => {});
+}
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') checkUpdate(); });
+setTimeout(checkUpdate, 1500);
+
 home();
 </script>
 </body>
