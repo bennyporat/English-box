@@ -393,7 +393,7 @@ function grade(w, ok, kind){
   if(ok){
     p.ok++;
     let cap = 5;
-    if(kind === 'choice') cap = S.settings.spelling ? 4 : 5; // כדי "לדעת" מילה צריך גם לכתוב אותה
+    // איות באנגלית לא חלק מהחומר — אפשר "לדעת" מילה גם בלי לכתוב אותה
     if(kind === 'flash') cap = 2;
     if(kind === 'match') cap = 3;
     if(kind === 'hint') cap = p.lvl;
@@ -452,13 +452,13 @@ function pickWords(n, maxNew=4){
   return res;
 }
 function smartType(w){
-  const p = peek(w), sp = S.settings.spelling;
+  const p = peek(w);
   if(!p || !p.seen) return 'intro';
   const l = p.lvl;
   if(l <= 1) return rnd(['en2he','en2he','listen']);
   if(l === 2) return rnd(['he2en','listen','en2he']);
-  if(l <= 4) return sp ? rnd(['type','type','he2en']) : rnd(['he2en','listen']);
-  return sp ? rnd(['type','he2en']) : rnd(['he2en','en2he','listen']);
+  if(l <= 4) return rnd(['he2en','say','listen']);
+  return rnd(['he2en','say','en2he']);
 }
 
 /* ================= מסך הבית ================= */
@@ -521,11 +521,11 @@ function home(){
   ${allWords().length < 4 ? `<div class="card">צריך לפחות 4 מילים כדי לשחק. הוסיפו מילים ב⚙️ הגדרות.</div>` : `
   <button class="big" onclick="startSmart()">🚀 תרגול חכם<small>מתמקד במילים שעוד לא יודע</small></button>
   <div class="grid">
-    <button class="game" onclick="startMode('flash')"><span class="ic">🃏</span><b>כרטיסיות</b><small>הפוך ובדוק את עצמך</small></button>
+    <button class="game" onclick="startMode('flash')"><span class="ic">🃏</span><b>כרטיסיות</b><small>כל ${ws.length} המילים</small></button>
     <button class="game" onclick="startMode('en2he')"><span class="ic">🎯</span><b>מה הפירוש?</b><small>אנגלית ← עברית</small></button>
     <button class="game" onclick="startMode('he2en')"><span class="ic">🔄</span><b>איך אומרים?</b><small>עברית ← אנגלית</small></button>
     <button class="game" onclick="startMode('listen')"><span class="ic">🔊</span><b>הקשב ובחר</b><small>שמיעה</small></button>
-    <button class="game" onclick="startMode('type')"><span class="ic">⌨️</span><b>איות</b><small>עברית ← כתוב באנגלית</small></button>
+    <button class="game" onclick="startMode('type')"><span class="ic">⌨️</span><b>איות (רשות)</b><small>עברית ← כתוב באנגלית</small></button>
     <button class="game" onclick="startMatch()"><span class="ic">🧩</span><b>התאמה</b><small>מצא זוגות מהר</small></button>
     <button class="game" style="grid-column:span 2" onclick="startMode('say')"><span class="ic">🗣️</span><b>אמור או כתוב בעברית <span class="newtag">חדש!</span></b><small>רואים מילה באנגלית ועונים בעברית: בקול 🎤 או בכתיבה ⌨️</small></button>
   </div>
@@ -561,12 +561,13 @@ function startSmart(list){
   newSession('smart', q);
 }
 function startMode(type){
-  let picked = pickWords(SESSION_WORDS, 6);
+  // כרטיסיות — כל המילים (או כל המילים שבמיקוד), בסדר אקראי
+  let picked = type === 'flash' ? shuffle(words()) : pickWords(SESSION_WORDS, 6);
   newSession(type, picked.map(w => ({w, type})));
 }
 function startTest(){
   const ws = shuffle(words()).slice(0, focusOn() ? Infinity : TEST_LEN); // במיקוד — כל המילים שבחר
-  const types = ['en2he','he2en', S.settings.spelling ? 'type' : 'listen'];
+  const types = ['en2he','he2en','listen']; // בלי איות באנגלית
   newSession('test', ws.map((w,i) => ({w, type: types[i % types.length]})));
   sess.queue = shuffle(sess.queue);
 }
@@ -905,7 +906,7 @@ function practiceWrong(){
   const list = [...sess.wrongWords.values()];
   const q = [];
   list.forEach(w => q.push({w, type:'en2he'}));
-  shuffle(list).forEach(w => q.push({w, type: S.settings.spelling ? 'type' : 'he2en'}));
+  shuffle(list).forEach(w => q.push({w, type: 'he2en'}));
   newSession('smart', q);
 }
 
@@ -1200,7 +1201,6 @@ function settings(){
   <div class="card set">
     <h3>👤 כללי</h3>
     <div style="display:flex;gap:8px;margin-bottom:8px"><input type="text" id="nm" value="${esc(S.name)}" placeholder="שם"><button class="btn" onclick="S.name=$('#nm').value.trim();save();toast('נשמר ✓')">שמור</button></div>
-    <label class="tg">✍️ כולל תרגול איות (כתיבה באנגלית)<input type="checkbox" ${s.spelling?'checked':''} onchange="S.settings.spelling=this.checked;save()"></label>
     <label class="tg">🔊 השמעת המילה אוטומטית<input type="checkbox" ${s.autospeak?'checked':''} onchange="S.settings.autospeak=this.checked;save()"></label>
     <label class="tg">🎵 צלילים<input type="checkbox" ${s.sound?'checked':''} onchange="S.settings.sound=this.checked;save()"></label>
   </div>
