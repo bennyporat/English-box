@@ -201,7 +201,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 <div id="app"></div>
 <div id="toast"></div>
 <canvas id="confetti"></canvas>
-<script src="words.js?v=2026-11-21c"></script>
+<script src="words.js?v=2026-11-21d"></script>
 <script>
 'use strict';
 /* ================= הגדרות ================= */
@@ -257,12 +257,13 @@ function bankWords(b){
 }
 function curBank(){
   const bl = bankList();
-  return bl.find(b => b.id === S.bank) || bl.find(b => b.id === window.DEFAULT_BANK) || bl[0];
+  const bi = builtinBanks();
+  return bl.find(b => b.id === S.bank) || bl.find(b => b.id === window.DEFAULT_BANK) || bl.find(b => b.id === bi[bi.length - 1].id) || bl[0];
 }
 function setBank(id){ S.bank = id; S.cat = ''; save(); home(); }
 // רמות: הבנקים בנויים אחד על השני. בבנק שנבחר מתרגלים בעיקר אותו,
 // ומדי פעם מגיעה מילה מהרמות הקודמות (לא מהרמות שמעליו) כדי לא לשכוח
-const REVIEW_SHARE = 0.25; // בערך רבע מהמילים בסבב — חזרה על רמות קודמות
+const REVIEW_SHARE = 0.3;  // 70% מהרמה שנבחרה, 30% מכל הרמות הקודמות ביחד
 function lowerBanks(){ const bl = bankList(), i = bl.findIndex(b => b.id === curBank().id); return i > 0 ? bl.slice(0, i) : []; }
 function lowerWords(){
   const here = new Set(allWords().map(w => key(w.en)));
@@ -1391,7 +1392,7 @@ function drawQR(){
 /* ================= התחלה ================= */
 /* ================= עדכון אוטומטי ================= */
 // כשיש גרסה חדשה באתר — טוענים אותה (הנתונים בטלפון לא נפגעים, הם שמורים בנפרד)
-const APP_VERSION = '2026-11-21c';
+const APP_VERSION = '2026-11-21d';
 function checkUpdate(){
   if(!/^https?:/.test(location.protocol)) return;
   fetch('version.json?t=' + Date.now(), {cache:'no-store'})
