@@ -201,7 +201,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 <div id="app"></div>
 <div id="toast"></div>
 <canvas id="confetti"></canvas>
-<script src="words.js?v=2026-11-21e"></script>
+<script src="words.js?v=2026-11-21f"></script>
 <script>
 'use strict';
 /* ================= הגדרות ================= */
@@ -243,9 +243,30 @@ const display = en => String(en).split('/')[0].trim(); // הצגה: הגרסה �
 
 /* --- בנקים של מילים --- */
 // בנקים מובנים מגיעים מ-words.js; אפשר להוסיף בנקים בהגדרות (נשמרים בטלפון)
-function builtinBanks(){ return (window.BANKS && window.BANKS.length) ? window.BANKS : [{id:'bank1', name:'המילים', words: window.WORDS || []}]; }
+/* --- קבוצות: לכל ילד הרמות שלו (מוגדר ב-words.js: GROUPS) --- */
+function groups(){ return (window.GROUPS && window.GROUPS.length) ? window.GROUPS : null; }
+function curGroup(){
+  const gs = groups(); if(!gs) return null;
+  return gs.find(g => g.id === S.group) || (hasHistory() ? gs[0] : null); // טלפון עם התקדמות קיימת = הקבוצה הראשונה (כפיר)
+}
+const hasHistory = () => Object.keys(S.progress || {}).length > 0;
+const needGroupPick = () => !!groups() && groups().length > 1 && !curGroup();
+function setGroup(id){
+  S.group = id;
+  const g = groups().find(x => x.id === id);
+  if(g && !S.name) S.name = g.name;
+  S.cat = ''; save(); home();
+}
+function allBuiltin(){ return (window.BANKS && window.BANKS.length) ? window.BANKS : [{id:'bank1', name:'המילים', words: window.WORDS || []}]; }
+function builtinBanks(){
+  const g = curGroup() || (groups() || [])[0];
+  if(!g) return allBuiltin();
+  return g.banks.map(id => allBuiltin().find(b => b.id === id)).filter(Boolean); // הסדר בקבוצה = הרמות
+}
 function bankList(){
-  return builtinBanks().map(b => ({...b, builtin:true})).concat((S.customBanks || []).map(b => ({...b, builtin:false})));
+  const gid = (curGroup() || {}).id;
+  return builtinBanks().map(b => ({...b, builtin:true}))
+    .concat((S.customBanks || []).filter(b => !b.group || !gid || b.group === gid).map(b => ({...b, builtin:false})));
 }
 function bankWords(b){
   if(!b) return [];
@@ -258,9 +279,16 @@ function bankWords(b){
 function curBank(){
   const bl = bankList();
   const bi = builtinBanks();
-  return bl.find(b => b.id === S.bank) || bl.find(b => b.id === window.DEFAULT_BANK) || bl.find(b => b.id === bi[bi.length - 1].id) || bl[0];
+  const gid = (curGroup() || {}).id;
+  const chosen = (S.bankByGroup || {})[gid] || S.bank; // הרמה שנבחרה — לכל קבוצה בנפרד
+  return bl.find(b => b.id === chosen) || bl.find(b => b.id === window.DEFAULT_BANK) || bl.find(b => b.id === bi[bi.length - 1].id) || bl[0];
 }
-function setBank(id){ S.bank = id; S.cat = ''; save(); home(); }
+function setBank(id){
+  S.bank = id;
+  const gid = (curGroup() || {}).id;
+  if(gid){ S.bankByGroup = S.bankByGroup || {}; S.bankByGroup[gid] = id; }
+  S.cat = ''; save(); home();
+}
 // רמות: הבנקים בנויים אחד על השני. בבנק שנבחר מתרגלים בעיקר אותו,
 // ומדי פעם מגיעה מילה מהרמות הקודמות (לא מהרמות שמעליו) כדי לא לשכוח
 const REVIEW_SHARE = 0.3;  // 70% מהרמה שנבחרה, 30% מכל הרמות הקודמות ביחד
@@ -538,6 +566,11 @@ function smartType(w){
 function home(){
   sess = null; stopTimer();
   if(checkUpdate.pending){ const go = checkUpdate.pending; checkUpdate.pending = null; return go(); }
+  if(needGroupPick()){ // טלפון חדש — קודם בוחרים מי לומד
+    app().innerHTML = `<div class="hello"><h1>היי! 👋</h1><p>מי לומד כאן?</p></div>
+      <div class="grid">${groups().map((g,i) => `<button class="game" onclick="setGroup(groups()[${i}].id)"><span class="ic">${i % 2 ? '👧' : '👦'}</span><b>${esc(g.name)}</b><small>${g.banks.length} ${g.banks.length === 1 ? 'רמה' : 'רמות'}</small></button>`).join('')}</div>`;
+    return;
+  }
   const st = stats(), ws = words();
   const pc = k => st.total ? (st[k]/st.total*100) : 0;
   const left = st.total - st.known;
@@ -556,8 +589,9 @@ function home(){
     <h1>היי${S.name ? ' ' + esc(S.name) : ''}! 👋</h1>
     <p>${['בוא נלמד כמה מילים','כל יום קצת — ומגיעים רחוק','מוכן לאתגר?'][new Date().getDate()%3]}</p>
   </div>
+  ${groups() && groups().length > 1 ? `<div class="filters">${groups().map((g,i) => `<button class="${g.id === curGroup().id ? 'on' : ''}" onclick="if(groups()[${i}].id !== curGroup().id && confirm('לעבור לקבוצה של ' + groups()[${i}].name + '?')) setGroup(groups()[${i}].id)">${i % 2 ? '👧' : '👦'} ${esc(g.name)}</button>`).join('')}</div>` : ''}
   <div class="banks">
-    <div class="blabel">📚 רמה (בנק מילים)</div>
+    <div class="blabel">📚 רמה (בנק מילים)${curGroup() ? ' — ' + esc(curGroup().name) : ''}</div>
     <div style="color:#fff;opacity:.85;font-size:12px;margin:-4px 0 8px">מתרגלים בעיקר את הרמה שבחרת, ומדי פעם חוזרים על מילים מהרמות הקודמות</div>
     <div class="filters" style="margin:0">
       ${bankList().map((b,i) => `<button class="${b.id === curBank().id ? 'on' : ''}" onclick="setBank(bankList()[${i}].id)">רמה ${i+1} · ${esc(b.name)} (${bankWords(b).length})</button>`).join('')}
@@ -1094,7 +1128,7 @@ function reportText(){
   const r = reportData(), a = r.all;
   const L = [];
   L.push(`📊 דוח English Box${S.name ? ' — ' + S.name : ''}`);
-  L.push(`📚 בנק: ${curBank().name}`);
+  L.push(`📚 ${curGroup() ? 'קבוצה: ' + curGroup().name + ' · ' : ''}בנק: ${curBank().name}`);
   L.push(`📅 ${new Date().toLocaleDateString('he-IL')}`);
   L.push('');
   L.push(`🎯 מוכנות למבחן: ${a.ready}%`);
@@ -1355,13 +1389,14 @@ function newBank(){
   </div>`;
   scrollTo(0,0);
 }
+function setBankSilent(id){ S.bank = id; const gid = (curGroup() || {}).id; if(gid){ S.bankByGroup = S.bankByGroup || {}; S.bankByGroup[gid] = id; } }
 function createBank(){
   const name = $('#bn').value.trim(), list = parseWords($('#wl').value);
   if(!name){ alert('צריך לתת שם לבנק'); return; }
   if(list.length < 4){ alert('לא זוהו מספיק מילים. צריך לפחות 4 שורות בפורמט: english - עברית'); return; }
   const id = 'c' + Date.now();
-  S.customBanks = (S.customBanks || []).concat({id, name, words:list});
-  S.bank = id; S.cat = ''; save();
+  S.customBanks = (S.customBanks || []).concat({id, name, words:list, group:(curGroup() || {}).id});
+  setBankSilent(id); S.cat = ''; save();
   toast(`נוצר בנק "${esc(name)}" עם ${list.length} מילים ✓`);
   home();
 }
@@ -1397,7 +1432,7 @@ function drawQR(){
 /* ================= התחלה ================= */
 /* ================= עדכון אוטומטי ================= */
 // כשיש גרסה חדשה באתר — טוענים אותה (הנתונים בטלפון לא נפגעים, הם שמורים בנפרד)
-const APP_VERSION = '2026-11-21e';
+const APP_VERSION = '2026-11-21f';
 function checkUpdate(){
   if(!/^https?:/.test(location.protocol)) return;
   fetch('version.json?t=' + Date.now(), {cache:'no-store'})
