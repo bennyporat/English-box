@@ -201,7 +201,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 <div id="app"></div>
 <div id="toast"></div>
 <canvas id="confetti"></canvas>
-<script src="words.js?v=2026-11-21b"></script>
+<script src="words.js?v=2026-11-21c"></script>
 <script>
 'use strict';
 /* ================= הגדרות ================= */
@@ -524,10 +524,11 @@ function smartType(w){
   const p = peek(w);
   if(!p || !p.seen) return 'intro';
   const l = p.lvl;
-  if(l <= 1) return rnd(['en2he','en2he','listen']);
-  if(l === 2) return rnd(['he2en','listen','en2he']);
-  if(l <= 4) return rnd(['he2en','say','listen']);
-  return rnd(['he2en','say','en2he']);
+  // listen = שומעים ובוחרים מרשימה; listenSay = שומעים ועונים בעברית (קול או כתיבה)
+  if(l <= 1) return rnd(['en2he','en2he','listen','listen']);
+  if(l === 2) return rnd(['he2en','listen','en2he','listenSay']);
+  if(l <= 4) return rnd(['he2en','say','listen','listenSay']);
+  return rnd(['he2en','say','listenSay','en2he']);
 }
 
 /* ================= מסך הבית ================= */
@@ -603,12 +604,13 @@ function home(){
     <button class="game" onclick="startMode('flash')"><span class="ic">🃏</span><b>כרטיסיות</b><small>כל ${ws.length} המילים</small></button>
     <button class="game" onclick="startMode('en2he')"><span class="ic">🎯</span><b>מה הפירוש?</b><small>אנגלית ← עברית</small></button>
     <button class="game" onclick="startMode('he2en')"><span class="ic">🔄</span><b>איך אומרים?</b><small>עברית ← אנגלית</small></button>
-    <button class="game" onclick="startMode('listen')"><span class="ic">🔊</span><b>הקשב ובחר</b><small>שמיעה</small></button>
+    <button class="game" onclick="startMode('listen')"><span class="ic">🔊</span><b>הקשב ובחר</b><small>שומעים ובוחרים פירוש</small></button>
     <button class="game" onclick="startMode('type')"><span class="ic">⌨️</span><b>איות (רשות)</b><small>עברית ← כתוב באנגלית</small></button>
     <button class="game" onclick="startMatch()"><span class="ic">🧩</span><b>התאמה</b><small>מצא זוגות מהר</small></button>
-    <button class="game" style="grid-column:span 2" onclick="startMode('say')"><span class="ic">🗣️</span><b>אמור או כתוב בעברית <span class="newtag">חדש!</span></b><small>רואים מילה באנגלית ועונים בעברית: בקול 🎤 או בכתיבה ⌨️</small></button>
+    <button class="game" style="grid-column:span 2" onclick="startMode('say')"><span class="ic">🗣️</span><b>אמור או כתוב בעברית</b><small>רואים מילה באנגלית ועונים בעברית: בקול 🎤 או בכתיבה ⌨️</small></button>
+    <button class="game" style="grid-column:span 2" onclick="startMode('listenSay')"><span class="ic">👂</span><b>שמע וענה בעברית <span class="newtag">חדש!</span></b><small>שומעים את המילה (בלי לראות אותה) ועונים בעברית: בקול 🎤 או בכתיבה ⌨️</small></button>
   </div>
-  <button class="big" style="background:linear-gradient(135deg,#22c55e,#0ea5e9);box-shadow:0 10px 24px rgba(14,165,233,.35)" onclick="startTest()">📝 מבחן לדוגמה<small>${focusOn() ? ws.length : Math.min(TEST_LEN, ws.length)} שאלות — בדוק כמה אתה מוכן</small></button>`}
+  <button class="big" style="background:linear-gradient(135deg,#22c55e,#0ea5e9);box-shadow:0 10px 24px rgba(14,165,233,.35)" onclick="startTest()">📝 מבחן לדוגמה<small>${focusOn() ? ws.length : Math.min(TEST_LEN, ws.length + lowerWords().length)} שאלות${reviewOn() ? ' · כולל חזרה על רמות קודמות' : ' — בדוק כמה אתה מוכן'}</small></button>`}
   <div class="row2">
     <button class="ghost" onclick="wordList('all','')">📚 המילים שלי</button>
     <button class="ghost" onclick="settings()">⚙️ הגדרות</button>
@@ -645,10 +647,16 @@ function startMode(type){
   newSession(type, picked.map(w => ({w, type})));
 }
 function startTest(){
-  const ws = shuffle(words()).slice(0, focusOn() ? Infinity : TEST_LEN); // במיקוד — כל המילים שבחר
-  const types = ['en2he','he2en','listen']; // בלי איות באנגלית
-  newSession('test', ws.map((w,i) => ({w, type: types[i % types.length]})));
-  sess.queue = shuffle(sess.queue);
+  let ws;
+  if(focusOn()) ws = shuffle(words());                       // במיקוד — כל המילים שבחר
+  else {
+    const n = Math.min(TEST_LEN, words().length + lowerWords().length);
+    const nRev = reviewOn() ? Math.min(lowerWords().length, Math.round(n * REVIEW_SHARE)) : 0; // חזרה על רמות קודמות
+    ws = shuffle(words()).slice(0, n - nRev).concat(weightedPick(lowerWords(), nRev, reviewWeight));
+  }
+  // בלי איות באנגלית. חלק מהשאלות בשמיעה בלבד (רואים את המילה רק אחרי התשובה)
+  const types = shuffle(['en2he','he2en','listen','listenSay']);
+  newSession('test', shuffle(ws).map((w,i) => ({w, type: types[i % types.length]})));
 }
 
 function topBar(){
@@ -727,9 +735,12 @@ function renderQ(){
         <button class="btn sec" onclick="typeGiveUp()">🤷</button>
       </div></div>`;
   }
-  else if(q.type === 'say'){
+  else if(q.type === 'say' || q.type === 'listenSay'){
     sess.tries = 0;
-    body = `<div class="card prompt typebox"><div class="lbl">מה זה בעברית?</div><div class="word en">${esc(display(w.en))}</div>${say}
+    const heard = q.type === 'listenSay';
+    body = `<div class="card prompt typebox">${heard
+      ? `<div class="lbl">👂 הקשב — מה זה בעברית?</div><button class="say huge" onclick="speak(sess.queue[sess.i].w.en)">🔊</button><div class="tap" style="margin-top:8px">אפשר ללחוץ שוב כדי לשמוע</div>`
+      : `<div class="lbl">מה זה בעברית?</div><div class="word en">${esc(display(w.en))}</div>${say}`}
       ${SR ? `<div style="margin-top:14px"><button class="mic" id="mic" onclick="listenHe()">🎤</button></div>
         <div class="heard" id="heard">לחץ על המיקרופון ותגיד את המילה בעברית</div><div class="or">— או כתוב —</div>`
            : `<div class="heard" id="heard"></div>`}
@@ -740,11 +751,11 @@ function renderQ(){
         <button class="btn sec" onclick="heHint()">💡 רמז</button>
         <button class="btn sec" onclick="typeGiveUp()">🤷</button>
       </div></div>`;
-    if(S.settings.autospeak) speak(w.en, 250);
+    if(heard || S.settings.autospeak) speak(w.en, 250);
   }
   const rev = isReview(w) ? `<div class="revtag">🔁 חזרה — מילה מ"${esc(wordBankName(w))}"</div>` : '';
   app().innerHTML = topBar() + rev + body;
-  if(q.type === 'say'){ $('#ti').addEventListener('keydown', e => { if(e.key === 'Enter') checkSayTyped(); }); }
+  if(q.type === 'say' || q.type === 'listenSay'){ $('#ti').addEventListener('keydown', e => { if(e.key === 'Enter') checkSayTyped(); }); }
   if(q.type === 'type'){
     const ti = $('#ti');
     ti.addEventListener('keydown', e => { if(e.key === 'Enter') checkType(); });
@@ -865,7 +876,7 @@ function heHint(){
 }
 function sayResult(answers, fromVoice){
   if(!sess || sess.locked) return;
-  const q = sess.queue[sess.i]; if(!q || q.type !== 'say') return;
+  const q = sess.queue[sess.i]; if(!q || (q.type !== 'say' && q.type !== 'listenSay')) return;
   const ok = answers.some(a => heMatch(q.w.he, a));
   if(!ok && fromVoice){
     sess.tries++;
@@ -913,10 +924,10 @@ function afterAnswer(ok, q, isFlash=false, note=null){
   let title = ok ? rnd(PRAISE) : rnd(COMFORT);
   if(ok && [3,5,10,15,20].includes(sess.combo)) title = `🔥 ${sess.combo} ברצף! ${rnd(PRAISE)}`;
   const pair = `<span class="en"><b>${esc(display(w.en))}</b></span> = ${esc(w.he)}`;
-  const text = note ? `${note}<br>${pair}` : (ok ? (q.type === 'listen' || q.type === 'type' || q.type === 'say' ? pair : '') : `התשובה הנכונה: ${pair}`);
+  const text = note ? `${note}<br>${pair}` : (ok ? (['listen','type','say','listenSay'].includes(q.type) ? pair : '') : `התשובה הנכונה: ${pair}`);
   showSheet(ok, `${ok ? '✅' : '💡'} ${title}`, text, !ok || isFlash ? 'המשך' : null);
   if(!ok) speak(w.en, 300);
-  if(ok && !isFlash){ sess.auto = setTimeout(next, q.type === 'type' || q.type === 'listen' || q.type === 'say' ? 1600 : 1000); }
+  if(ok && !isFlash){ sess.auto = setTimeout(next, ['type','listen','say','listenSay'].includes(q.type) ? 1600 : 1000); }
   if(isFlash && ok) sess.auto = setTimeout(next, 700);
 }
 function showSheet(ok, title, text, btn){
@@ -1380,7 +1391,7 @@ function drawQR(){
 /* ================= התחלה ================= */
 /* ================= עדכון אוטומטי ================= */
 // כשיש גרסה חדשה באתר — טוענים אותה (הנתונים בטלפון לא נפגעים, הם שמורים בנפרד)
-const APP_VERSION = '2026-11-21b';
+const APP_VERSION = '2026-11-21c';
 function checkUpdate(){
   if(!/^https?:/.test(location.protocol)) return;
   fetch('version.json?t=' + Date.now(), {cache:'no-store'})
