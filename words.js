@@ -1,3 +1,45 @@
+// ===== Unit 1 — דף חזרה למבחן (30/11) =====
+const BANK0 = [
+  { cat: 'אוצר מילים', en: 'arrives/arrive',        he: 'מגיע / מגיעה' },
+  { cat: 'אוצר מילים', en: 'boat',                  he: 'סירה' },
+  { cat: 'אוצר מילים', en: 'called',                he: 'נקרא / בשם' },
+  { cat: 'אוצר מילים', en: 'collect/collects',      he: 'לאסוף / אוסף' },
+  { cat: 'אוצר מילים', en: 'comes home/come home',  he: 'בא הביתה / באה הביתה' },
+  { cat: 'אוצר מילים', en: 'comfortable',           he: 'נוח' },
+  { cat: 'אוצר מילים', en: 'competition',           he: 'תחרות' },
+  { cat: 'אוצר מילים', en: 'describe',              he: 'לתאר / תארו' },
+  { cat: 'אוצר מילים', en: 'different',             he: 'שונה / שונים' },
+  { cat: 'אוצר מילים', en: 'famous',                he: 'מפורסם / מפורסמת' },
+  { cat: 'אוצר מילים', en: 'full',                  he: 'מלא' },
+  { cat: 'אוצר מילים', en: 'get off the bus',       he: 'לרדת מהאוטובוס' },
+  { cat: 'אוצר מילים', en: 'get on the bus',        he: 'לעלות לאוטובוס' },
+  { cat: 'אוצר מילים', en: 'give a kiss',           he: 'לתת נשיקה' },
+  { cat: 'אוצר מילים', en: 'hit',                   he: 'להכות / לפגוע' },
+  { cat: 'אוצר מילים', en: 'invite',                he: 'להזמין (אורחים)' },
+  { cat: 'אוצר מילים', en: 'island',                he: 'אי' },
+  { cat: 'אוצר מילים', en: 'keeps/keep',            he: 'שומר / ממשיך' },
+  { cat: 'אוצר מילים', en: 'leaves/leave',          he: 'יוצא / עוזב (גם: עלים)' },
+  { cat: 'אוצר מילים', en: 'like the cold',         he: 'לאהוב את הקור' },
+  { cat: 'אוצר מילים', en: 'make a mistake',        he: 'לטעות / לעשות טעות' },
+  { cat: 'אוצר מילים', en: 'meal',                  he: 'ארוחה' },
+  { cat: 'אוצר מילים', en: 'message',               he: 'הודעה' },
+  { cat: 'אוצר מילים', en: 'million',               he: 'מיליון (1,000,000)' },
+  { cat: 'אוצר מילים', en: 'miss',                  he: 'לפספס / להתגעגע' },
+  { cat: 'אוצר מילים', en: 'mountain',              he: 'הר' },
+  { cat: 'אוצר מילים', en: 'nurse',                 he: 'אח / אחות (ברפואה)' },
+  { cat: 'אוצר מילים', en: 'order/orders',          he: 'להזמין (אוכל) / מזמין' },
+  { cat: 'אוצר מילים', en: 'pocket',                he: 'כיס' },
+  { cat: 'אוצר מילים', en: 'popular',               he: 'פופולרי / מקובל' },
+  { cat: 'אוצר מילים', en: 'river',                 he: 'נהר' },
+  { cat: 'אוצר מילים', en: 'shows/show',            he: 'מראה / מציג' },
+  { cat: 'אוצר מילים', en: 'special',               he: 'מיוחד' },
+  { cat: 'אוצר מילים', en: 'take a picture',        he: 'לצלם / לקחת תמונה' },
+  { cat: 'אוצר מילים', en: 'take the bus',          he: 'לנסוע באוטובוס' },
+  { cat: 'אוצר מילים', en: 'tasty',                 he: 'טעים' },
+  { cat: 'אוצר מילים', en: 'team',                  he: 'קבוצה' },
+  { cat: 'אוצר מילים', en: 'usually',               he: 'בדרך כלל' },
+];
+
 // ===== מבחן 1 =====
 // { en: 'המילה באנגלית', he: 'התרגום', cat: 'קטגוריה' }
 // כמה תשובות נכונות באנגלית מפרידים עם "/" (הראשונה היא זו שמוצגת)
@@ -204,7 +246,8 @@ const BANK2 = [
 //   { id: 'bank3', name: 'מבחן 3', words: BANK3 },
 // הרמה האחרונה ברשימה נפתחת כברירת מחדל (למי שעוד לא בחר רמה בעצמו).
 window.BANKS = [
+  { id: 'bank0', name: 'Unit 1 — מבחן 30/11', words: BANK0 },   // נוסף אחרון אבל הוא הרמה הכי קלה
   { id: 'bank1', name: 'מבחן 1', words: BANK1 },
   { id: 'bank2', name: 'מבחן 2 — Get Ready', words: BANK2 },
 ];
-window.WORDS = BANK1;            // תאימות לגרסאות ישנות
+window.WORDS = BANK1;            // תאימות לגרסאות ישנות (הרשימה המקורית)

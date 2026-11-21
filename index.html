@@ -201,7 +201,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 <div id="app"></div>
 <div id="toast"></div>
 <canvas id="confetti"></canvas>
-<script src="words.js?v=2026-11-21d"></script>
+<script src="words.js?v=2026-11-21e"></script>
 <script>
 'use strict';
 /* ================= הגדרות ================= */
@@ -250,7 +250,7 @@ function bankList(){
 function bankWords(b){
   if(!b) return [];
   if(b.builtin){
-    if(b.id === builtinBanks()[0].id && S.customWords) return S.customWords; // רשימה ערוכה ישנה
+    if(b.id === LEGACY_BANK && S.customWords) return S.customWords; // רשימה ערוכה ישנה
     return (S.bankOverrides || {})[b.id] || b.words || [];
   }
   return b.words || [];
@@ -298,10 +298,12 @@ function toggleFocus(k, on){
 }
 function clearFocus(){ const here = new Set(allWords().map(w => key(w.en))); S.focus = (S.focus || []).filter(k => !here.has(k)); save(); }
 function setCat(c){ S.cat = c; save(); home(); }
-const isFirstBank = () => curBank().id === builtinBanks()[0].id;
+// נתונים ישנים (שיא, אבני דרך, מבחנים, רשימה ערוכה) שייכים לבנק המקורי — לפי ה-id שלו, לא לפי המיקום ברשימה
+const LEGACY_BANK = 'bank1';
+const isFirstBank = () => curBank().id === LEGACY_BANK;
 function bestTest(){ return isFirstBank() ? S.best.test : (S.bestByBank || {})[curBank().id]; }
 function setBestTest(v){ if(isFirstBank()) S.best.test = v; else { S.bestByBank = S.bestByBank || {}; S.bestByBank[curBank().id] = v; } }
-const testsHere = () => (S.tests || []).filter(t => (t.bank || builtinBanks()[0].id) === curBank().id);
+const testsHere = () => (S.tests || []).filter(t => (t.bank || LEGACY_BANK) === curBank().id);
 function prog(w){
   const k = key(w.en);
   return S.progress[k] || (S.progress[k] = {lvl:0, seen:0, ok:0, bad:0, last:0, lastBad:0});
@@ -456,7 +458,7 @@ function checkMilestones(){
   const st = stats(allWords()); if(!st.total) return;
   const pct = Math.round(st.known / st.total * 100);
   for(const m of [10,25,50,75,100]){
-    const mk = curBank().id === builtinBanks()[0].id ? m : curBank().id + ':' + m;
+    const mk = curBank().id === LEGACY_BANK ? m : curBank().id + ':' + m;
     if(pct >= m && !S.milestones.includes(mk)){
       S.milestones.push(mk); save();
       setTimeout(() => {
@@ -673,10 +675,13 @@ function askExit(){
 }
 function options(w, field){
   const opts = [w[field]], seen = new Set([w[field].trim()]);
+  const wEn = new Set(variants(w.en)), wHe = new Set(heVariants(w.he));
+  // מסיח לא יכול להיות גם הוא תשובה נכונה (אותה מילה באנגלית או אותו פירוש בעברית)
+  const clash = o => variants(o.en).some(v => wEn.has(v)) || heVariants(o.he).some(v => wHe.has(v));
   for(const o of shuffle(levelWords())){
     if(opts.length >= 4) break;
     const v = o[field].trim();
-    if(key(o.en) !== key(w.en) && !seen.has(v)){ seen.add(v); opts.push(o[field]); }
+    if(key(o.en) !== key(w.en) && !seen.has(v) && !clash(o)){ seen.add(v); opts.push(o[field]); }
   }
   return shuffle(opts);
 }
@@ -1242,7 +1247,7 @@ function wordList(f, c){
   });
   wordList.shown = ws;
 }
-const CAT_EN = {'שמות עצם':'NOUNS', 'שמות עצם ופעלים':'NOUNS AND VERBS', 'פעלים':'VERBS', 'תארים':'ADJECTIVES', 'אחר':'OTHER'};
+const CAT_EN = {'אוצר מילים':'VOCABULARY', 'שמות עצם':'NOUNS', 'שמות עצם ופעלים':'NOUNS AND VERBS', 'פעלים':'VERBS', 'תארים':'ADJECTIVES', 'אחר':'OTHER'};
 function groupsOf(ws){
   const gs = [];
   ws.forEach((w, i) => { const c = w.cat || ''; let g = gs.find(x => x.cat === c); if(!g) gs.push(g = {cat:c, items:[]}); g.items.push({w, i}); });
@@ -1334,8 +1339,8 @@ function settings(){
   </div>`;
   drawQR();
 }
-function bankEdited(){ const b = curBank(); return b.builtin && (b.id === builtinBanks()[0].id ? !!S.customWords : !!(S.bankOverrides || {})[b.id]); }
-function resetBank(){ const b = curBank(); if(b.id === builtinBanks()[0].id) S.customWords = null; else if(S.bankOverrides) delete S.bankOverrides[b.id]; save(); }
+function bankEdited(){ const b = curBank(); return b.builtin && (b.id === LEGACY_BANK ? !!S.customWords : !!(S.bankOverrides || {})[b.id]); }
+function resetBank(){ const b = curBank(); if(b.id === LEGACY_BANK) S.customWords = null; else if(S.bankOverrides) delete S.bankOverrides[b.id]; save(); }
 function uniq(list){ const seen = new Set(); return list.filter(w => w && w.en && w.he && !seen.has(key(w.en)) && seen.add(key(w.en))); }
 function newBank(){
   app().innerHTML = `
@@ -1374,7 +1379,7 @@ function saveWords(){
   if(list.length < 4){ alert('לא זוהו מספיק מילים. צריך לפחות 4 שורות בפורמט: english - עברית'); return; }
   const b = curBank();
   if(!b.builtin) S.customBanks = (S.customBanks || []).map(x => x.id === b.id ? {...x, words:list} : x);
-  else if(b.id === builtinBanks()[0].id) S.customWords = list;
+  else if(b.id === LEGACY_BANK) S.customWords = list;
   else { S.bankOverrides = S.bankOverrides || {}; S.bankOverrides[b.id] = list; }
   save();
   toast(`נשמרו ${list.length} מילים ✓`);
@@ -1392,7 +1397,7 @@ function drawQR(){
 /* ================= התחלה ================= */
 /* ================= עדכון אוטומטי ================= */
 // כשיש גרסה חדשה באתר — טוענים אותה (הנתונים בטלפון לא נפגעים, הם שמורים בנפרד)
-const APP_VERSION = '2026-11-21d';
+const APP_VERSION = '2026-11-21e';
 function checkUpdate(){
   if(!/^https?:/.test(location.protocol)) return;
   fetch('version.json?t=' + Date.now(), {cache:'no-store'})
