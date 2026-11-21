@@ -201,7 +201,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 <div id="app"></div>
 <div id="toast"></div>
 <canvas id="confetti"></canvas>
-<script src="words.js?v=2026-11-21f"></script>
+<script src="words.js?v=2026-11-21g"></script>
 <script>
 'use strict';
 /* ================= הגדרות ================= */
@@ -1281,7 +1281,7 @@ function wordList(f, c){
   });
   wordList.shown = ws;
 }
-const CAT_EN = {'אוצר מילים':'VOCABULARY', 'שמות עצם':'NOUNS', 'שמות עצם ופעלים':'NOUNS AND VERBS', 'פעלים':'VERBS', 'תארים':'ADJECTIVES', 'אחר':'OTHER'};
+const CAT_EN = {'אוצר מילים':'VOCABULARY', 'ביטויי זמן':'TIME EXPRESSIONS', 'פעלים נוספים (דקדוק)':'MORE VERBS (GRAMMAR)', 'שמות עצם':'NOUNS', 'שמות עצם ופעלים':'NOUNS AND VERBS', 'פעלים':'VERBS', 'תארים':'ADJECTIVES', 'אחר':'OTHER'};
 function groupsOf(ws){
   const gs = [];
   ws.forEach((w, i) => { const c = w.cat || ''; let g = gs.find(x => x.cat === c); if(!g) gs.push(g = {cat:c, items:[]}); g.items.push({w, i}); });
@@ -1432,7 +1432,7 @@ function drawQR(){
 /* ================= התחלה ================= */
 /* ================= עדכון אוטומטי ================= */
 // כשיש גרסה חדשה באתר — טוענים אותה (הנתונים בטלפון לא נפגעים, הם שמורים בנפרד)
-const APP_VERSION = '2026-11-21f';
+const APP_VERSION = '2026-11-21g';
 function checkUpdate(){
   if(!/^https?:/.test(location.protocol)) return;
   fetch('version.json?t=' + Date.now(), {cache:'no-store'})

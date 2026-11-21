@@ -240,11 +240,103 @@ const BANK2 = [
 
 // ===== בנקים של מילים =====
 // id קבוע לכל בנק (לא לשנות — ההתקדמות נשמרת לפי המילה עצמה, אבל הבחירה בבנק לפי ה-id)
+// ===== יעלי — רמה 2: חוברת (Getting Ready 1-2, Word Practice, Unit Check) =====
+// בלי המילים שכבר נמצאות ברמה 1 שלה (דף החזרה 30/11)
+const BANK3 = [
+  // ----- שמות עצם -----
+  { cat: 'שמות עצם', en: 'date',      he: 'פגישה / דייט' },
+  { cat: 'שמות עצם', en: 'forest',    he: 'יער' },
+  { cat: 'שמות עצם', en: 'hospital',  he: 'בית חולים' },
+  { cat: 'שמות עצם', en: 'kiss',      he: 'נשיקה' },
+  { cat: 'שמות עצם', en: 'nature',    he: 'טבע' },
+  { cat: 'שמות עצם', en: 'reason',    he: 'סיבה' },
+
+  // ----- פעלים -----
+  { cat: 'פעלים', en: 'believe',      he: 'להאמין' },
+  { cat: 'פעלים', en: 'carry',        he: 'לסחוב / לשאת' },
+  { cat: 'פעלים', en: 'catch',        he: 'לתפוס' },
+  { cat: 'פעלים', en: 'feel well/feels well', he: 'להרגיש טוב' },
+  { cat: 'פעלים', en: 'get better',   he: 'להחלים / להרגיש יותר טוב' },
+  { cat: 'פעלים', en: 'get the flu',  he: 'לחלות בשפעת' },
+  { cat: 'פעלים', en: 'live/lives',   he: 'לגור / לחיות' },
+  { cat: 'פעלים', en: 'mean/means',   he: 'פירושו / להתכוון' },
+  { cat: 'פעלים', en: 'see',          he: 'לראות / לפגוש' },
+  { cat: 'פעלים', en: 'take a train/takes a train', he: 'לנסוע ברכבת' },
+  { cat: 'פעלים', en: 'tell a story/tell stories',  he: 'לספר סיפור' },
+  { cat: 'פעלים', en: 'wake up',      he: 'להתעורר' },
+
+  // ----- תארים -----
+  { cat: 'תארים', en: 'afraid',       he: 'מפחד / פוחד' },
+  { cat: 'תארים', en: 'clever',       he: 'חכם / פיקח' },
+  { cat: 'תארים', en: 'excellent',    he: 'מצוין' },
+  { cat: 'תארים', en: 'glad',         he: 'שמח' },
+  { cat: 'תארים', en: 'medical',      he: 'רפואי' },
+  { cat: 'תארים', en: 'perfect',      he: 'מושלם' },
+  { cat: 'תארים', en: 'sorry',        he: 'מצטער' },
+
+  // ----- אחר -----
+  { cat: 'אחר', en: 'a while',        he: 'זמן מה' },
+  { cat: 'אחר', en: 'against',        he: 'נגד' },
+  { cat: 'אחר', en: 'all the time',   he: 'כל הזמן' },
+  { cat: 'אחר', en: 'almost',         he: 'כמעט' },
+  { cat: 'אחר', en: 'both',           he: 'שניהם / שני' },
+  { cat: 'אחר', en: 'could',          he: 'יכול (בעבר) / יכולתי' },
+  { cat: 'אחר', en: 'Dear .../dear',  he: 'יקר / יקרה (בפתיחת מכתב)' },
+  { cat: 'אחר', en: 'directly',       he: 'ישירות' },
+  { cat: 'אחר', en: 'hundred',        he: 'מאה (100)' },
+  { cat: 'אחר', en: 'if',             he: 'אם' },
+  { cat: 'אחר', en: 'instead (of)/instead/instead of', he: 'במקום' },
+  { cat: 'אחר', en: 'much',           he: 'הרבה' },
+  { cat: 'אחר', en: 'only',           he: 'רק' },
+  { cat: 'אחר', en: 'really',         he: 'מאוד / באמת' },
+  { cat: 'אחר', en: 'see you soon',   he: 'נתראה בקרוב' },
+  { cat: 'אחר', en: 'should',         he: 'צריך / כדאי' },
+  { cat: 'אחר', en: 'so',             he: 'כך ש... / לכן' },
+  { cat: 'אחר', en: 'Take care!/take care', he: 'שמור על עצמך! / תשמרי על עצמך!' },
+  { cat: 'אחר', en: 'thousand',       he: 'אלף (1,000)' },
+
+  // ----- ביטויי זמן -----
+  { cat: 'ביטויי זמן', en: 'always',          he: 'תמיד' },
+  { cat: 'ביטויי זמן', en: 'often',           he: 'לעיתים קרובות / הרבה פעמים' },
+  { cat: 'ביטויי זמן', en: 'sometimes',       he: 'לפעמים' },
+  { cat: 'ביטויי זמן', en: 'never',           he: 'אף פעם (לא) / לעולם לא' },
+  { cat: 'ביטויי זמן', en: 'every day',       he: 'כל יום' },
+  { cat: 'ביטויי זמן', en: 'every week',      he: 'כל שבוע' },
+  { cat: 'ביטויי זמן', en: 'once a day',      he: 'פעם ביום' },
+  { cat: 'ביטויי זמן', en: 'once a week',     he: 'פעם בשבוע' },
+  { cat: 'ביטויי זמן', en: 'in the morning',  he: 'בבוקר' },
+  { cat: 'ביטויי זמן', en: 'in the afternoon', he: 'אחר הצהריים' },
+  { cat: 'ביטויי זמן', en: 'in the evening',  he: 'בערב' },
+  { cat: 'ביטויי זמן', en: 'at night',        he: 'בלילה' },
+  { cat: 'ביטויי זמן', en: 'on Friday',       he: 'ביום שישי' },
+  { cat: 'ביטויי זמן', en: "at five o'clock/at five oclock", he: 'בשעה חמש' },
+
+  // ----- פעלים מתרגילי הדקדוק -----
+  { cat: 'פעלים נוספים (דקדוק)', en: 'bring',  he: 'להביא' },
+  { cat: 'פעלים נוספים (דקדוק)', en: 'buy',    he: 'לקנות' },
+  { cat: 'פעלים נוספים (דקדוק)', en: 'copy',   he: 'להעתיק' },
+  { cat: 'פעלים נוספים (דקדוק)', en: 'do',     he: 'לעשות' },
+  { cat: 'פעלים נוספים (דקדוק)', en: 'drink',  he: 'לשתות' },
+  { cat: 'פעלים נוספים (דקדוק)', en: 'finish', he: 'לסיים' },
+  { cat: 'פעלים נוספים (דקדוק)', en: 'fly',    he: 'לעוף / לטוס' },
+  { cat: 'פעלים נוספים (דקדוק)', en: 'give',   he: 'לתת' },
+  { cat: 'פעלים נוספים (דקדוק)', en: 'go',     he: 'ללכת / לנסוע' },
+  { cat: 'פעלים נוספים (דקדוק)', en: 'play',   he: 'לשחק / לנגן' },
+  { cat: 'פעלים נוספים (דקדוק)', en: 'push',   he: 'לדחוף' },
+  { cat: 'פעלים נוספים (דקדוק)', en: 'ride',   he: 'לרכוב' },
+  { cat: 'פעלים נוספים (דקדוק)', en: 'study',  he: 'ללמוד' },
+  { cat: 'פעלים נוספים (דקדוק)', en: 'take',   he: 'לקחת' },
+  { cat: 'פעלים נוספים (דקדוק)', en: 'wash',   he: 'לשטוף / לרחוץ' },
+  { cat: 'פעלים נוספים (דקדוק)', en: 'watch',  he: 'לצפות (בטלוויזיה)' },
+  { cat: 'פעלים נוספים (דקדוק)', en: 'write',  he: 'לכתוב' },
+];
+
 // כל הבנקים. ה-id קבוע — לא לשנות (הבחירה והנתונים נשמרים לפי ה-id)
 window.BANKS = [
   { id: 'bank1', name: 'מבחן 1', words: BANK1 },
   { id: 'bank2', name: 'מבחן 2 — Get Ready', words: BANK2 },
   { id: 'bank0', name: 'Unit 1 — מבחן 30/11', words: BANK0 },
+  { id: 'bank3', name: 'חוברת — Getting Ready', words: BANK3 },
 ];
 
 // ===== קבוצות — לכל ילד הרמות שלו =====
@@ -254,6 +346,6 @@ window.BANKS = [
 // הרמה האחרונה בקבוצה נפתחת כברירת מחדל (למי שעוד לא בחר רמה בעצמו).
 window.GROUPS = [
   { id: 'kfir',  name: 'כפיר', banks: ['bank1', 'bank2'] },
-  { id: 'yaeli', name: 'יעלי', banks: ['bank0'] },
+  { id: 'yaeli', name: 'יעלי', banks: ['bank0', 'bank3'] },
 ];
 window.WORDS = BANK1;            // תאימות לגרסאות ישנות (הרשימה המקורית)
