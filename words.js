@@ -1,7 +1,7 @@
-// ===== רשימת המילים =====
+// ===== מבחן 1 =====
 // { en: 'המילה באנגלית', he: 'התרגום', cat: 'קטגוריה' }
 // כמה תשובות נכונות באנגלית מפרידים עם "/" (הראשונה היא זו שמוצגת)
-window.WORDS = [
+const BANK1 = [
   // ----- שמות עצם -----
   { cat: 'שמות עצם', en: 'activity',   he: 'פעילות' },
   { cat: 'שמות עצם', en: 'band',       he: 'להקה' },
@@ -98,3 +98,109 @@ window.WORDS = [
   { cat: 'אחר', en: 'What about...?',    he: 'מה לגבי...?' },
   { cat: 'אחר', en: 'Would you like...?', he: 'היית רוצה...?' },
 ];
+
+// ===== מבחן 2 — Get Ready 1, Get Ready 2, Listening (Word Review עמ' 56) =====
+const BANK2 = [
+  // ----- שמות עצם -----
+  { cat: 'שמות עצם', en: 'ability',     he: 'יכולת' },
+  { cat: 'שמות עצם', en: 'adult',       he: 'מבוגר' },
+  { cat: 'שמות עצם', en: 'athlete',     he: 'ספורטאי' },
+  { cat: 'שמות עצם', en: 'audience',    he: 'קהל' },
+  { cat: 'שמות עצם', en: 'cash',        he: 'מזומן / כסף מזומן' },
+  { cat: 'שמות עצם', en: 'champion',    he: 'אלוף' },
+  { cat: 'שמות עצם', en: 'chance',      he: 'סיכוי / הזדמנות' },
+  { cat: 'שמות עצם', en: 'competition', he: 'תחרות' },
+  { cat: 'שמות עצם', en: 'distance',    he: 'מרחק' },
+  { cat: 'שמות עצם', en: 'effort',      he: 'מאמץ' },
+  { cat: 'שמות עצם', en: 'event',       he: 'אירוע' },
+  { cat: 'שמות עצם', en: 'exercise',    he: 'תרגיל / התעמלות' },
+  { cat: 'שמות עצם', en: 'goal',        he: 'מטרה / שער (בכדורגל)' },
+  { cat: 'שמות עצם', en: 'heart',       he: 'לב' },
+  { cat: 'שמות עצם', en: 'instruction', he: 'הוראה' },
+  { cat: 'שמות עצם', en: 'judge',       he: 'שופט' },
+  { cat: 'שמות עצם', en: 'key',         he: 'מפתח' },
+  { cat: 'שמות עצם', en: 'life',        he: 'חיים' },
+  { cat: 'שמות עצם', en: 'opportunity', he: 'הזדמנות' },
+  { cat: 'שמות עצם', en: 'past',        he: 'עבר' },
+  { cat: 'שמות עצם', en: 'player',      he: 'שחקן' },
+  { cat: 'שמות עצם', en: 'project',     he: 'פרויקט / משימה' },
+  { cat: 'שמות עצם', en: 'puzzle',      he: 'פאזל / חידה' },
+  { cat: 'שמות עצם', en: 'quiz',        he: 'חידון' },
+  { cat: 'שמות עצם', en: 'race',        he: 'מירוץ' },
+  { cat: 'שמות עצם', en: 'role',        he: 'תפקיד' },
+  { cat: 'שמות עצם', en: 'stage',       he: 'במה / שלב' },
+  { cat: 'שמות עצם', en: 'success',     he: 'הצלחה' },
+  { cat: 'שמות עצם', en: 'surprise',    he: 'הפתעה' },
+  { cat: 'שמות עצם', en: 'topic',       he: 'נושא' },
+  { cat: 'שמות עצם', en: 'training',    he: 'אימון' },
+  { cat: 'שמות עצם', en: 'voice',       he: 'קול' },
+
+  // ----- פעלים -----
+  { cat: 'פעלים', en: 'appear',     he: 'להופיע / להיראות' },
+  { cat: 'פעלים', en: 'become',     he: 'להפוך ל... / להיות' },
+  { cat: 'פעלים', en: 'collect',    he: 'לאסוף' },
+  { cat: 'פעלים', en: 'compete',    he: 'להתחרות' },
+  { cat: 'פעלים', en: 'discover',   he: 'לגלות' },
+  { cat: 'פעלים', en: 'dream',      he: 'לחלום' },
+  { cat: 'פעלים', en: 'entertain',  he: 'לבדר' },
+  { cat: 'פעלים', en: 'expect',     he: 'לצפות (שיקרה) / לחכות ל...' },
+  { cat: 'פעלים', en: 'lose',       he: 'להפסיד / לאבד' },
+  { cat: 'פעלים', en: 'perform',    he: 'לבצע / להופיע (על במה)' },
+  { cat: 'פעלים', en: 'practice',   he: 'להתאמן / לתרגל' },
+  { cat: 'פעלים', en: 'prove',      he: 'להוכיח' },
+  { cat: 'פעלים', en: 'reach',      he: 'להגיע ל...' },
+  { cat: 'פעלים', en: 'take part (in)/take part', he: 'להשתתף (ב...)' },
+  { cat: 'פעלים', en: 'try out',    he: 'לנסות / להיבחן (לקבוצה)' },
+  { cat: 'פעלים', en: 'win (won)/win/won', he: 'לנצח / לזכות' },
+  { cat: 'פעלים', en: 'wish',       he: 'לאחל / לרצות מאוד' },
+
+  // ----- אחר -----
+  { cat: 'אחר', en: 'at least',          he: 'לפחות' },
+  { cat: 'אחר', en: 'badly',             he: 'רע / בצורה גרועה' },
+  { cat: 'אחר', en: "I don't mind/I do not mind", he: 'לא אכפת לי / לא מפריע לי' },
+  { cat: 'אחר', en: 'in that case',      he: 'במקרה כזה / אם כך' },
+  { cat: 'אחר', en: "it doesn't matter/it does not matter", he: 'זה לא משנה' },
+  { cat: 'אחר', en: 'just a minute',     he: 'רק רגע' },
+  { cat: 'אחר', en: 'like',              he: 'כמו' },
+  { cat: 'אחר', en: 'more or less',      he: 'פחות או יותר' },
+  { cat: 'אחר', en: 'of course (not)/of course/of course not', he: 'כמובן (שלא)' },
+  { cat: 'אחר', en: 'onto',              he: 'על (גבי) / אל' },
+  { cat: 'אחר', en: 'role model',        he: 'מודל לחיקוי' },
+  { cat: 'אחר', en: "that's all right/that is all right", he: 'זה בסדר' },
+  { cat: 'אחר', en: 'the same',          he: 'אותו דבר / זהה' },
+  { cat: 'אחר', en: '(your) own/own/your own', he: 'משלך / (ה...) שלך' },
+  { cat: 'אחר', en: 'yours',             he: 'שלך' },
+
+  // ----- תארים -----
+  { cat: 'תארים', en: 'angry',        he: 'כועס' },
+  { cat: 'תארים', en: 'double',       he: 'כפול' },
+  { cat: 'תארים', en: 'final',        he: 'אחרון / סופי' },
+  { cat: 'תארים', en: 'free',         he: 'חופשי / חינם' },
+  { cat: 'תארים', en: 'great',        he: 'נהדר / גדול' },
+  { cat: 'תארים', en: 'healthy',      he: 'בריא' },
+  { cat: 'תארים', en: 'heavy',        he: 'כבד' },
+  { cat: 'תארים', en: 'huge',         he: 'ענק' },
+  { cat: 'תארים', en: 'musical',      he: 'מוזיקלי' },
+  { cat: 'תארים', en: 'necessary',    he: 'נחוץ / הכרחי' },
+  { cat: 'תארים', en: 'perfect',      he: 'מושלם' },
+  { cat: 'תארים', en: 'personal',     he: 'אישי' },
+  { cat: 'תארים', en: 'popular',      he: 'פופולרי / אהוד' },
+  { cat: 'תארים', en: 'prepared',     he: 'מוכן' },
+  { cat: 'תארים', en: 'professional', he: 'מקצועי' },
+  { cat: 'תארים', en: 'public',       he: 'ציבורי' },
+  { cat: 'תארים', en: 'serious',      he: 'רציני' },
+  { cat: 'תארים', en: 'similar',      he: 'דומה' },
+  { cat: 'תארים', en: 'successful',   he: 'מצליח' },
+  { cat: 'תארים', en: 'total',        he: 'כולל / סך הכל' },
+  { cat: 'תארים', en: 'valuable',     he: 'יקר ערך / בעל ערך' },
+  { cat: 'תארים', en: 'well-known',   he: 'ידוע / מפורסם' },
+];
+
+// ===== בנקים של מילים =====
+// id קבוע לכל בנק (לא לשנות — ההתקדמות נשמרת לפי המילה עצמה, אבל הבחירה בבנק לפי ה-id)
+window.BANKS = [
+  { id: 'bank1', name: 'מבחן 1', words: BANK1 },
+  { id: 'bank2', name: 'מבחן 2 — Get Ready', words: BANK2 },
+];
+window.DEFAULT_BANK = 'bank2';   // הבנק שנפתח כברירת מחדל (המבחן הבא)
+window.WORDS = BANK1;            // תאימות לגרסאות ישנות

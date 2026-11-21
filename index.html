@@ -104,6 +104,8 @@ button{font-family:inherit;cursor:pointer;border:none}
 .typebox input.he-in{direction:rtl}
 .newtag{background:#ff4d8d;color:#fff;font-size:11px;padding:2px 8px;border-radius:99px;vertical-align:middle;margin-right:4px}
 .focusc{border:3px solid #ff4d8d}
+.banks{background:rgba(255,255,255,.14);border-radius:18px;padding:10px 12px;margin-bottom:14px}
+.blabel{color:#fff;font-weight:700;font-size:14px;margin-bottom:8px}
 .fbar{position:sticky;top:8px;z-index:5;background:#fff;border-radius:18px;padding:12px;margin-bottom:12px;box-shadow:0 8px 20px rgba(30,20,90,.25)}
 .fbar .cnt{font-weight:800;font-size:17px;margin-bottom:8px}
 .fbar .bs{display:flex;gap:6px;flex-wrap:wrap}
@@ -198,7 +200,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 <div id="app"></div>
 <div id="toast"></div>
 <canvas id="confetti"></canvas>
-<script src="words.js?v=2026-11-07a"></script>
+<script src="words.js?v=2026-11-21a"></script>
 <script>
 'use strict';
 /* ================= הגדרות ================= */
@@ -238,8 +240,28 @@ function shuffle(a){ a = a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.
 const key = en => String(en).toLowerCase().trim();
 const display = en => String(en).split('/')[0].trim(); // הצגה: הגרסה הראשונה
 
+/* --- בנקים של מילים --- */
+// בנקים מובנים מגיעים מ-words.js; אפשר להוסיף בנקים בהגדרות (נשמרים בטלפון)
+function builtinBanks(){ return (window.BANKS && window.BANKS.length) ? window.BANKS : [{id:'bank1', name:'המילים', words: window.WORDS || []}]; }
+function bankList(){
+  return builtinBanks().map(b => ({...b, builtin:true})).concat((S.customBanks || []).map(b => ({...b, builtin:false})));
+}
+function bankWords(b){
+  if(!b) return [];
+  if(b.builtin){
+    if(b.id === builtinBanks()[0].id && S.customWords) return S.customWords; // רשימה ערוכה ישנה
+    return (S.bankOverrides || {})[b.id] || b.words || [];
+  }
+  return b.words || [];
+}
+function curBank(){
+  const bl = bankList();
+  return bl.find(b => b.id === S.bank) || bl.find(b => b.id === window.DEFAULT_BANK) || bl[0];
+}
+function setBank(id){ S.bank = id; S.cat = ''; save(); home(); }
+function bankKey(b){ return b ? b.id : ''; }
 function allWords(){
-  const list = S.customWords || window.WORDS || [];
+  const list = bankWords(curBank());
   const seen = new Set();
   return list.filter(w => w && w.en && w.he && !seen.has(key(w.en)) && seen.add(key(w.en)));
 }
@@ -259,8 +281,12 @@ function toggleFocus(k, on){
   if(on) f.add(k); else f.delete(k);
   S.focus = [...f]; save();
 }
-function clearFocus(){ S.focus = []; save(); }
+function clearFocus(){ const here = new Set(allWords().map(w => key(w.en))); S.focus = (S.focus || []).filter(k => !here.has(k)); save(); }
 function setCat(c){ S.cat = c; save(); home(); }
+const isFirstBank = () => curBank().id === builtinBanks()[0].id;
+function bestTest(){ return isFirstBank() ? S.best.test : (S.bestByBank || {})[curBank().id]; }
+function setBestTest(v){ if(isFirstBank()) S.best.test = v; else { S.bestByBank = S.bestByBank || {}; S.bestByBank[curBank().id] = v; } }
+const testsHere = () => (S.tests || []).filter(t => (t.bank || builtinBanks()[0].id) === curBank().id);
 function prog(w){
   const k = key(w.en);
   return S.progress[k] || (S.progress[k] = {lvl:0, seen:0, ok:0, bad:0, last:0, lastBad:0});
@@ -415,8 +441,9 @@ function checkMilestones(){
   const st = stats(allWords()); if(!st.total) return;
   const pct = Math.round(st.known / st.total * 100);
   for(const m of [10,25,50,75,100]){
-    if(pct >= m && !S.milestones.includes(m)){
-      S.milestones.push(m); save();
+    const mk = curBank().id === builtinBanks()[0].id ? m : curBank().id + ':' + m;
+    if(pct >= m && !S.milestones.includes(mk)){
+      S.milestones.push(mk); save();
       setTimeout(() => {
         confetti(220); sfx.win();
         modal(m === 100
@@ -483,6 +510,13 @@ function home(){
     <h1>היי${S.name ? ' ' + esc(S.name) : ''}! 👋</h1>
     <p>${['בוא נלמד כמה מילים','כל יום קצת — ומגיעים רחוק','מוכן לאתגר?'][new Date().getDate()%3]}</p>
   </div>
+  <div class="banks">
+    <div class="blabel">📚 בנק מילים</div>
+    <div class="filters" style="margin:0">
+      ${bankList().map((b,i) => `<button class="${b.id === curBank().id ? 'on' : ''}" onclick="setBank(bankList()[${i}].id)">${esc(b.name)} (${bankWords(b).length})</button>`).join('')}
+      <button onclick="newBank()">➕ בנק חדש</button>
+    </div>
+  </div>
   ${focusOn() ? `<div class="card focusc">
       <div style="font-size:18px">🎯 <b>מתמקד ב-${focusWords().length} מילים שבחרת</b></div>
       <div style="color:var(--muted);font-size:13px;margin:4px 0 10px">כל התרגולים, המשחקים והמבחן — רק עליהן, שוב ושוב</div>
@@ -517,7 +551,7 @@ function home(){
   <div class="chips">
     <div class="chip"><b>⭐ ${S.xp}</b><small>נקודות</small></div>
     <div class="chip"><b>🔥 ${streak}</b><small>ימים ברצף</small></div>
-    <div class="chip"><b>🏅 ${S.best.test || '-'}</b><small>שיא במבחן</small></div>
+    <div class="chip"><b>🏅 ${bestTest() || '-'}</b><small>שיא במבחן</small></div>
   </div>
   ${allWords().length < 4 ? `<div class="card">צריך לפחות 4 מילים כדי לשחק. הוסיפו מילים ב⚙️ הגדרות.</div>` : `
   <button class="big" onclick="startSmart()">🚀 תרגול חכם<small>מתמקד במילים שעוד לא יודע</small></button>
@@ -703,7 +737,7 @@ function pick(i){
 }
 
 /* --- איות --- */
-function normEn(s){ return String(s).toLowerCase().replace(/[’‘`]/g,"'").replace(/[^a-z' ]/g,' ').replace(/\s+/g,' ').trim(); }
+function normEn(s){ return String(s).toLowerCase().replace(/[’‘`']/g,'').replace(/[^a-z ]/g,' ').replace(/\s+/g,' ').trim(); } // גרש לא משנה: dont = don't
 function variants(en){
   const out = new Set();
   String(en).split('/').map(normEn).filter(Boolean).forEach(v => { out.add(v); out.add(v.replace(/^(to|a|an|the) /,'')); });
@@ -864,8 +898,8 @@ function endSession(){
   let head = pct >= 90 ? 'מושלם!' : pct >= 75 ? 'עבודה מצוינת!' : pct >= 55 ? 'יפה מאוד, ממשיכים!' : 'כל תרגול מקרב אותך!';
   let newBest = false;
   if(isTest){
-    S.tests = (S.tests || []).concat({d:Date.now(), score:pct, n:total, cat:(S.cat && cats().includes(S.cat)) ? S.cat : ''}).slice(-30);
-    if(pct > (S.best.test || 0)){ S.best.test = pct; newBest = true; }
+    S.tests = (S.tests || []).concat({d:Date.now(), score:pct, n:total, cat:(S.cat && cats().includes(S.cat)) ? S.cat : '', bank:curBank().id}).slice(-30);
+    if(pct > (bestTest() || 0)){ setBestTest(pct); newBest = true; }
     save();
   }
   if(pct >= 75 || newBest){ confetti(); sfx.win(); }
@@ -991,13 +1025,14 @@ function reportData(){
   const days = S.days || {};
   const last7 = [...Array(7)].map((_,i) => { const k = dayKeyAgo(6-i); const d = days[k] || {a:0,c:0,ms:0}; return {k, label: i === 6 ? 'היום' : fmtDate(Date.now() - (6-i)*864e5), ...d}; });
   const week = last7.reduce((s,d) => ({a:s.a+d.a, c:s.c+d.c, ms:s.ms+d.ms, n:s.n+(d.a>0?1:0)}), {a:0,c:0,ms:0,n:0});
-  return {all, byCat, last7, week, today:last7[6], tests:(S.tests||[]).slice(-5).reverse(), hard:hardWords()};
+  return {all, byCat, last7, week, today:last7[6], tests:testsHere().slice(-5).reverse(), hard:hardWords()};
 }
 const mins = ms => Math.max(0, Math.round(ms/60000));
 function reportText(){
   const r = reportData(), a = r.all;
   const L = [];
   L.push(`📊 דוח English Box${S.name ? ' — ' + S.name : ''}`);
+  L.push(`📚 בנק: ${curBank().name}`);
   L.push(`📅 ${new Date().toLocaleDateString('he-IL')}`);
   L.push('');
   L.push(`🎯 מוכנות למבחן: ${a.ready}%`);
@@ -1009,6 +1044,8 @@ function reportText(){
   L.push(`📈 7 ימים: תרגל ב-${r.week.n} ימים, ${r.week.a} תשובות (${r.week.a ? Math.round(r.week.c/r.week.a*100) : 0}% נכונות), כ-${mins(r.week.ms)} דק'`);
   L.push(`🔥 ימים ברצף: ${S.streak || 0}`);
   if(r.tests.length){ L.push(''); L.push('📝 מבחנים אחרונים:'); r.tests.forEach(t => L.push(`• ${fmtDate(t.d)}: ${t.score}${t.cat ? ' (' + t.cat + ')' : ''}`)); }
+  const others = bankList().filter(b => b.id !== curBank().id);
+  if(others.length){ L.push(''); L.push('📚 בנקים אחרים: ' + others.map(b => { const st = stats(uniq(bankWords(b))); return `${b.name}: ${st.ready}% (יודע ${st.known}/${st.total})`; }).join(' · ')); }
   if(r.hard.length){ L.push(''); L.push('⚠️ מילים שקשות לו:'); L.push(r.hard.map(w => `${display(w.en)} (${w.he})`).join(', ')); }
   return L.join('\n');
 }
@@ -1017,6 +1054,7 @@ function report(){
   const maxA = Math.max(10, ...r.last7.map(d => d.a));
   app().innerHTML = `
   <div class="top"><button class="x" onclick="home()">→</button><h2 style="margin:0">📊 דוח התקדמות</h2></div>
+  <div style="color:#fff;margin:-6px 4px 12px;font-weight:700">📚 ${esc(curBank().name)}</div>
   <div class="card">
     <div class="ready"><div class="ring" style="--p:${a.ready}"><div>${a.ready}%</div></div>
       <div><h2>מוכנות למבחן</h2><p>יודע <b>${a.known}</b> · כמעט <b>${a.almost}</b> · לומד <b>${a.learning}</b> · חדשות <b>${a.new}</b><br>מתוך ${a.total} מילים</p></div></div>
@@ -1081,6 +1119,7 @@ function wordList(f, c){
   const nFocusCat = inCat.filter(w => F().has(key(w.en))).length;
   app().innerHTML = `
   <div class="top"><button class="x" onclick="home()">→</button><h2 style="margin:0">📚 המילים שלי</h2></div>
+  <div style="color:#fff;margin:-6px 4px 12px;font-weight:700">בנק: ${esc(curBank().name)}</div>
   <div class="fbar">
     <div class="cnt" id="fcnt"></div>
     <div class="bs">
@@ -1100,7 +1139,7 @@ function wordList(f, c){
   </div>
   ${ws.length < all.length ? `<div class="card" style="padding:12px;display:flex;justify-content:space-between;align-items:center;gap:8px">
      <span>מוצגות <b>${ws.length}</b> מתוך ${all.length} מילים</span><button class="btn sec" style="padding:8px 12px;font-size:14px" onclick="wordList('all','')">הצג את כולן</button></div>` : ''}
-  ${S.customWords ? `<div class="card" style="padding:12px;font-size:14px">✏️ בטלפון הזה נשמרה רשימה שנערכה בהגדרות (${all.length} מילים) ולא הרשימה המלאה.
+  ${S.customWords && isFirstBank() ? `<div class="card" style="padding:12px;font-size:14px">✏️ בטלפון הזה נשמרה רשימה שנערכה בהגדרות (${all.length} מילים) ולא הרשימה המלאה.
      <button class="btn sec" style="padding:8px 12px;font-size:14px;margin-top:8px" onclick="if(confirm('לחזור לרשימת המילים המלאה? ההתקדמות נשמרת.')){S.customWords=null;save();wordList('all','')}">↩️ חזור לרשימה המלאה</button></div>` : ''}
   ${ws.length ? groupsOf(ws).map((g, gi) => `<div class="card wgroup">
     <div class="ghead">
@@ -1161,7 +1200,8 @@ function pickHardest(){
   const pool = allWords().filter(w => !wcat || w.cat === wcat).filter(w => category(w) !== 'known');
   const list = shuffle(pool).sort((a,b) => sc(b) - sc(a)).slice(0, 10);
   if(!list.length){ toast('אתה כבר יודע את כל המילים כאן! 🏆'); return; }
-  S.focus = list.map(w => key(w.en)); save();
+  const here = new Set(allWords().map(w => key(w.en)));
+  S.focus = (S.focus || []).filter(k => !here.has(k)).concat(list.map(w => key(w.en))); save();
   toast(`🎯 נבחרו ${list.length} מילים`);
   wordList('all');
 }
@@ -1207,12 +1247,19 @@ function settings(){
     <label class="tg">🎵 צלילים<input type="checkbox" ${s.sound?'checked':''} onchange="S.settings.sound=this.checked;save()"></label>
   </div>
   <div class="card set">
-    <h3>📝 רשימת המילים (${allWords().length})</h3>
-    <div class="hint">מילה בכל שורה: <b class="en">english - עברית</b>. אפשר גם להדביק רשימה מהמחברת/וואטסאפ.<br>כמה תשובות באנגלית: <span class="en">big/large - גדול</span><br>נושא: שורה שמתחילה ב-<b>#</b> (למשל <b># פעלים</b>)<br>${S.customWords ? '✏️ כרגע בשימוש רשימה שנערכה כאן (ולא הקובץ words.js)' : '📄 כרגע בשימוש הרשימה מהקובץ words.js'}</div>
+    <h3>📚 בנקים של מילים</h3>
+    <div class="hint">בנק פעיל: <b>${esc(curBank().name)}</b>. מחליפים בנק במסך הבית.</div>
+    <div class="btns"><button class="btn" onclick="newBank()">➕ הוסף בנק חדש</button></div>
+  </div>
+  <div class="card set">
+    <h3>📝 המילים בבנק "${esc(curBank().name)}" (${allWords().length})</h3>
+    ${!curBank().builtin ? `<div style="display:flex;gap:8px;margin-bottom:8px"><input type="text" id="bn" value="${esc(curBank().name)}" placeholder="שם הבנק"><button class="btn sec" onclick="renameBank()">שנה שם</button></div>` : ''}
+    <div class="hint">מילה בכל שורה: <b class="en">english - עברית</b>. אפשר גם להדביק רשימה מהמחברת/וואטסאפ.<br>כמה תשובות באנגלית: <span class="en">big/large - גדול</span><br>נושא: שורה שמתחילה ב-<b>#</b> (למשל <b># פעלים</b>)<br>${curBank().builtin ? (bankEdited() ? '✏️ הבנק נערך בטלפון הזה (ולא מהקובץ words.js)' : '📄 הבנק מגיע מהקובץ words.js') : '📱 בנק שנוצר בטלפון הזה'}</div>
     <textarea id="wl" dir="ltr">${esc(wordsToText(allWords()))}</textarea>
     <div class="btns">
       <button class="btn" onclick="saveWords()">💾 שמור רשימה</button>
-      ${S.customWords ? `<button class="btn sec" onclick="if(confirm('לחזור לרשימה מהקובץ words.js?')){S.customWords=null;save();settings();toast('חזרנו לרשימה מהקובץ')}">↩️ חזרה לקובץ</button>` : ''}
+      ${curBank().builtin && bankEdited() ? `<button class="btn sec" onclick="if(confirm('לחזור לרשימה מהקובץ words.js?')){resetBank();settings();toast('חזרנו לרשימה מהקובץ')}">↩️ חזרה לקובץ</button>` : ''}
+      ${!curBank().builtin ? `<button class="btn red" onclick="deleteBank()">🗑️ מחק בנק</button>` : ''}
     </div>
   </div>
   <div class="card set">
@@ -1226,14 +1273,53 @@ function settings(){
     <div class="hint" style="text-align:center">גרסה: ${APP_VERSION}</div>
     <h3>🧹 איפוס</h3>
     <div class="hint">מוחק את כל ההתקדמות, הנקודות והשיאים (הרשימה נשארת).</div>
-    <button class="btn red" onclick="if(confirm('בטוח? כל ההתקדמות תימחק')){const c=S.customWords,st=S.settings,n=S.name,f=S.focus;S=defaultState();S.customWords=c;S.settings=st;S.name=n;S.focus=f;save();home();toast('ההתקדמות אופסה')}">אפס התקדמות</button>
+    <button class="btn red" onclick="if(confirm('בטוח? כל ההתקדמות תימחק')){const c=S.customWords,st=S.settings,n=S.name,f=S.focus,cb=S.customBanks,bo=S.bankOverrides,bk=S.bank;S=defaultState();S.customWords=c;S.settings=st;S.name=n;S.focus=f;S.customBanks=cb;S.bankOverrides=bo;S.bank=bk;save();home();toast('ההתקדמות אופסה')}">אפס התקדמות</button>
   </div>`;
   drawQR();
+}
+function bankEdited(){ const b = curBank(); return b.builtin && (b.id === builtinBanks()[0].id ? !!S.customWords : !!(S.bankOverrides || {})[b.id]); }
+function resetBank(){ const b = curBank(); if(b.id === builtinBanks()[0].id) S.customWords = null; else if(S.bankOverrides) delete S.bankOverrides[b.id]; save(); }
+function uniq(list){ const seen = new Set(); return list.filter(w => w && w.en && w.he && !seen.has(key(w.en)) && seen.add(key(w.en))); }
+function newBank(){
+  app().innerHTML = `
+  <div class="top"><button class="x" onclick="home()">→</button><h2 style="margin:0">➕ בנק מילים חדש</h2></div>
+  <div class="card set">
+    <h3>שם הבנק</h3>
+    <input type="text" id="bn" placeholder="למשל: מבחן 3">
+    <h3 style="margin-top:16px">המילים</h3>
+    <div class="hint">מילה בכל שורה: <b class="en">english - עברית</b>. נושא: שורה שמתחילה ב-<b>#</b> (למשל <b># פעלים</b>).<br>אפשר להדביק רשימה מוכנה.</div>
+    <textarea id="wl" dir="ltr" placeholder="# שמות עצם&#10;ability - יכולת&#10;adult - מבוגר"></textarea>
+    <div class="btns"><button class="btn" onclick="createBank()">💾 צור בנק</button><button class="btn sec" onclick="home()">ביטול</button></div>
+  </div>`;
+  scrollTo(0,0);
+}
+function createBank(){
+  const name = $('#bn').value.trim(), list = parseWords($('#wl').value);
+  if(!name){ alert('צריך לתת שם לבנק'); return; }
+  if(list.length < 4){ alert('לא זוהו מספיק מילים. צריך לפחות 4 שורות בפורמט: english - עברית'); return; }
+  const id = 'c' + Date.now();
+  S.customBanks = (S.customBanks || []).concat({id, name, words:list});
+  S.bank = id; S.cat = ''; save();
+  toast(`נוצר בנק "${esc(name)}" עם ${list.length} מילים ✓`);
+  home();
+}
+function renameBank(){
+  const b = curBank(), v = $('#bn').value.trim(); if(b.builtin || !v) return;
+  S.customBanks = (S.customBanks || []).map(x => x.id === b.id ? {...x, name:v} : x); save(); toast('נשמר ✓'); settings();
+}
+function deleteBank(){
+  const b = curBank(); if(b.builtin) return;
+  if(!confirm(`למחוק את הבנק "${b.name}"? (ההתקדמות במילים נשמרת)`)) return;
+  S.customBanks = (S.customBanks || []).filter(x => x.id !== b.id); S.bank = ''; save(); toast('הבנק נמחק'); home();
 }
 function saveWords(){
   const list = parseWords($('#wl').value);
   if(list.length < 4){ alert('לא זוהו מספיק מילים. צריך לפחות 4 שורות בפורמט: english - עברית'); return; }
-  S.customWords = list; save();
+  const b = curBank();
+  if(!b.builtin) S.customBanks = (S.customBanks || []).map(x => x.id === b.id ? {...x, words:list} : x);
+  else if(b.id === builtinBanks()[0].id) S.customWords = list;
+  else { S.bankOverrides = S.bankOverrides || {}; S.bankOverrides[b.id] = list; }
+  save();
   toast(`נשמרו ${list.length} מילים ✓`);
   settings();
 }
@@ -1249,7 +1335,7 @@ function drawQR(){
 /* ================= התחלה ================= */
 /* ================= עדכון אוטומטי ================= */
 // כשיש גרסה חדשה באתר — טוענים אותה (הנתונים בטלפון לא נפגעים, הם שמורים בנפרד)
-const APP_VERSION = '2026-11-07a';
+const APP_VERSION = '2026-11-21a';
 function checkUpdate(){
   if(!/^https?:/.test(location.protocol)) return;
   fetch('version.json?t=' + Date.now(), {cache:'no-store'})
