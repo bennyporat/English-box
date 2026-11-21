@@ -104,6 +104,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 .typebox input.he-in{direction:rtl}
 .newtag{background:#ff4d8d;color:#fff;font-size:11px;padding:2px 8px;border-radius:99px;vertical-align:middle;margin-right:4px}
 .focusc{border:3px solid #ff4d8d}
+.revtag{background:#fff7d6;color:#8a5a00;border-radius:12px;padding:6px 12px;font-size:14px;font-weight:700;text-align:center;margin:-6px 0 10px}
 .banks{background:rgba(255,255,255,.14);border-radius:18px;padding:10px 12px;margin-bottom:14px}
 .blabel{color:#fff;font-weight:700;font-size:14px;margin-bottom:8px}
 .fbar{position:sticky;top:8px;z-index:5;background:#fff;border-radius:18px;padding:12px;margin-bottom:12px;box-shadow:0 8px 20px rgba(30,20,90,.25)}
@@ -200,7 +201,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 <div id="app"></div>
 <div id="toast"></div>
 <canvas id="confetti"></canvas>
-<script src="words.js?v=2026-11-21a"></script>
+<script src="words.js?v=2026-11-21b"></script>
 <script>
 'use strict';
 /* ================= הגדרות ================= */
@@ -259,6 +260,19 @@ function curBank(){
   return bl.find(b => b.id === S.bank) || bl.find(b => b.id === window.DEFAULT_BANK) || bl[0];
 }
 function setBank(id){ S.bank = id; S.cat = ''; save(); home(); }
+// רמות: הבנקים בנויים אחד על השני. בבנק שנבחר מתרגלים בעיקר אותו,
+// ומדי פעם מגיעה מילה מהרמות הקודמות (לא מהרמות שמעליו) כדי לא לשכוח
+const REVIEW_SHARE = 0.25; // בערך רבע מהמילים בסבב — חזרה על רמות קודמות
+function lowerBanks(){ const bl = bankList(), i = bl.findIndex(b => b.id === curBank().id); return i > 0 ? bl.slice(0, i) : []; }
+function lowerWords(){
+  const here = new Set(allWords().map(w => key(w.en)));
+  return uniq(lowerBanks().flatMap(b => bankWords(b))).filter(w => !here.has(key(w.en)));
+}
+function levelWords(){ return uniq(allWords().concat(lowerWords())); } // הרמה הנוכחית + כל מה שמתחתיה
+// חזרה רק כשמתרגלים את כל הבנק (לא כשבחר מילים מסוימות או נושא מסוים)
+const reviewOn = () => !focusOn() && !(S.cat && cats().includes(S.cat)) && lowerWords().length > 0;
+function wordBankName(w){ const k = key(w.en); const b = bankList().find(b => bankWords(b).some(x => key(x.en) === k)); return b ? b.name : ''; }
+const isReview = w => !allWords().some(x => key(x.en) === key(w.en));
 function bankKey(b){ return b ? b.id : ''; }
 function allWords(){
   const list = bankWords(curBank());
@@ -464,7 +478,35 @@ function weightOf(w){
   if(p.lastBad && Date.now() - p.lastBad < 3*864e5) wt += 4; // טעה לאחרונה
   return wt;
 }
+function reviewWeight(w){
+  const p = peek(w);
+  if(!p || !p.seen) return 2;                               // מילה ישנה שעוד לא תרגל כאן
+  const days = Math.min(14, (Date.now() - (p.last || 0)) / 864e5);
+  let wt = (p.lvl >= 5 ? 1 : (6 - p.lvl) * 1.5) + days * 0.3; // לא יודע / לא ראה מזמן => יותר סיכוי
+  if(p.lastBad && Date.now() - p.lastBad < 7*864e5) wt += 3;
+  return wt;
+}
+function weightedPick(pool, n, wf){
+  pool = pool.slice(); const res = [];
+  while(res.length < n && pool.length){
+    const ws = pool.map(wf);
+    let r = Math.random() * ws.reduce((a,b) => a+b, 0), i = 0;
+    for(; i < ws.length; i++){ r -= ws[i]; if(r <= 0) break; }
+    res.push(pool.splice(Math.min(i, pool.length - 1), 1)[0]);
+  }
+  return res;
+}
 function pickWords(n, maxNew=4){
+  // רמות: חלק מהמילים מהרמות הקודמות, מפוזרות באקראי בתוך הסבב
+  if(reviewOn() && n >= 4){
+    const nRev = Math.min(lowerWords().length, Math.max(1, Math.round(n * REVIEW_SHARE)));
+    const res = pickMain(n - nRev, maxNew);
+    weightedPick(lowerWords(), nRev, reviewWeight).forEach(w => res.splice(Math.floor(Math.random() * (res.length + 1)), 0, w));
+    return res;
+  }
+  return pickMain(n, maxNew);
+}
+function pickMain(n, maxNew){
   if(focusOn()) maxNew = Infinity; // הוא בחר את המילים בעצמו — לא מגבילים מילים חדשות
   const pool = words(), res = []; let newCount = 0;
   while(res.length < n && pool.length){
@@ -511,9 +553,10 @@ function home(){
     <p>${['בוא נלמד כמה מילים','כל יום קצת — ומגיעים רחוק','מוכן לאתגר?'][new Date().getDate()%3]}</p>
   </div>
   <div class="banks">
-    <div class="blabel">📚 בנק מילים</div>
+    <div class="blabel">📚 רמה (בנק מילים)</div>
+    <div style="color:#fff;opacity:.85;font-size:12px;margin:-4px 0 8px">מתרגלים בעיקר את הרמה שבחרת, ומדי פעם חוזרים על מילים מהרמות הקודמות</div>
     <div class="filters" style="margin:0">
-      ${bankList().map((b,i) => `<button class="${b.id === curBank().id ? 'on' : ''}" onclick="setBank(bankList()[${i}].id)">${esc(b.name)} (${bankWords(b).length})</button>`).join('')}
+      ${bankList().map((b,i) => `<button class="${b.id === curBank().id ? 'on' : ''}" onclick="setBank(bankList()[${i}].id)">רמה ${i+1} · ${esc(b.name)} (${bankWords(b).length})</button>`).join('')}
       <button onclick="newBank()">➕ בנק חדש</button>
     </div>
   </div>
@@ -545,6 +588,7 @@ function home(){
       <span style="--c:var(--learning)">לומד <b>${st.learning}</b></span>
       <span style="--c:var(--new)">חדשות <b>${st.new}</b></span>
     </div>
+    ${lowerBanks().length ? `<div class="goal">🔁 רמות קודמות: ${lowerBanks().map(b => { const st = stats(uniq(bankWords(b))); return `${esc(b.name)} — ${st.ready}%`; }).join(' · ')}</div>` : ''}
     <div class="goal">🎯 יעד יומי: ${todayCorrect}/${DAILY_GOAL} תשובות נכונות
       <div class="bar"><div style="width:${goalPct}%"></div></div></div>
   </div>
@@ -578,7 +622,7 @@ function setName(){ const v = $('#nm').value.trim(); if(v){ S.name = v; save(); 
 let sess = null;
 function newSession(mode, queue){
   const before = {};
-  words().forEach(w => before[key(w.en)] = peek(w)?.lvl || 0);
+  levelWords().forEach(w => before[key(w.en)] = peek(w)?.lvl || 0);
   sess = {mode, queue, i:0, correct:0, wrong:0, combo:0, bestCombo:0, xp0:S.xp, before, known0:stats().known, wrongWords:new Map(), answered:0};
   renderQ();
 }
@@ -620,7 +664,7 @@ function askExit(){
 }
 function options(w, field){
   const opts = [w[field]], seen = new Set([w[field].trim()]);
-  for(const o of shuffle(allWords())){
+  for(const o of shuffle(levelWords())){
     if(opts.length >= 4) break;
     const v = o[field].trim();
     if(key(o.en) !== key(w.en) && !seen.has(v)){ seen.add(v); opts.push(o[field]); }
@@ -698,7 +742,8 @@ function renderQ(){
       </div></div>`;
     if(S.settings.autospeak) speak(w.en, 250);
   }
-  app().innerHTML = topBar() + body;
+  const rev = isReview(w) ? `<div class="revtag">🔁 חזרה — מילה מ"${esc(wordBankName(w))}"</div>` : '';
+  app().innerHTML = topBar() + rev + body;
   if(q.type === 'say'){ $('#ti').addEventListener('keydown', e => { if(e.key === 'Enter') checkSayTyped(); }); }
   if(q.type === 'type'){
     const ti = $('#ti');
@@ -891,7 +936,7 @@ function endSession(){
   const pct = total ? Math.round(sess.correct / total * 100) : 100;
   const st = stats();
   let improved = 0;
-  words().forEach(w => { if((peek(w)?.lvl || 0) > (sess.before[key(w.en)] || 0)) improved++; });
+  levelWords().forEach(w => { if((peek(w)?.lvl || 0) > (sess.before[key(w.en)] || 0)) improved++; });
   const newKnown = st.known - sess.known0;
   const isTest = sess.mode === 'test';
   let emo = pct >= 90 ? '🏆' : pct >= 75 ? '🌟' : pct >= 55 ? '💪' : '🌱';
@@ -1335,7 +1380,7 @@ function drawQR(){
 /* ================= התחלה ================= */
 /* ================= עדכון אוטומטי ================= */
 // כשיש גרסה חדשה באתר — טוענים אותה (הנתונים בטלפון לא נפגעים, הם שמורים בנפרד)
-const APP_VERSION = '2026-11-21a';
+const APP_VERSION = '2026-11-21b';
 function checkUpdate(){
   if(!/^https?:/.test(location.protocol)) return;
   fetch('version.json?t=' + Date.now(), {cache:'no-store'})
