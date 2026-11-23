@@ -201,7 +201,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 <div id="app"></div>
 <div id="toast"></div>
 <canvas id="confetti"></canvas>
-<script src="words.js?v=2026-11-21i"></script>
+<script src="words.js?v=2026-11-23a"></script>
 <script>
 'use strict';
 /* ================= הגדרות ================= */
@@ -453,6 +453,7 @@ function logDay(ok){
   const now = Date.now();
   if(d.t && now - d.t < 120000) d.ms += now - d.t; else d.ms += 8000; // הפסקה ארוכה לא נספרת
   d.t = now; d.a++; if(ok) d.c++;
+  repLog(r => { if(r.t && now - r.t < 120000) r.ms += now - r.t; else r.ms += 8000; r.t = now; r.a++; if(ok) r.c++; });
   const keys = Object.keys(S.days);
   if(keys.length > 60) keys.sort((a,b) => new Date(a) - new Date(b)).slice(0, keys.length - 60).forEach(k => delete S.days[k]);
 }
@@ -477,6 +478,7 @@ function grade(w, ok, kind){
     p.lvl = Math.max(0, p.lvl - (kind === 'flash' ? 1 : 2));
   }
   if(category(w) === 'known' && before !== 'known'){
+    repLog(r => r.known++);
     setTimeout(() => toast(`⭐ כבשת מילה חדשה: <b class="en">${esc(display(w.en))}</b>`), 300);
   }
   save();
@@ -663,6 +665,7 @@ function newSession(mode, queue){
   const before = {};
   levelWords().forEach(w => before[key(w.en)] = peek(w)?.lvl || 0);
   sess = {mode, queue, i:0, correct:0, wrong:0, combo:0, bestCombo:0, xp0:S.xp, before, known0:stats().known, wrongWords:new Map(), answered:0};
+  repLog(r => r.sessions++);
   renderQ();
 }
 function startSmart(list){
@@ -999,6 +1002,7 @@ function endSession(){
   if(isTest){
     S.tests = (S.tests || []).concat({d:Date.now(), score:pct, n:total, cat:(S.cat && cats().includes(S.cat)) ? S.cat : '', bank:curBank().id}).slice(-30);
     if(pct > (bestTest() || 0)){ setBestTest(pct); newBest = true; }
+    repLog(r => r.tests.push(pct));
     save();
   }
   if(pct >= 75 || newBest){ confetti(); sfx.win(); }
@@ -1035,6 +1039,7 @@ function endSession(){
   <button class="ghost" style="width:100%" onclick="home()">🏠 לתפריט הראשי</button>`;
   document.querySelectorAll('[data-wi]').forEach(d => d.onclick = () => speak(wrongList[+d.dataset.wi].en));
   sess.done = true;
+  sendReport();
   scrollTo(0,0);
 }
 function practiceWrong(){
@@ -1435,7 +1440,7 @@ function drawQR(){
 /* ================= התחלה ================= */
 /* ================= עדכון אוטומטי ================= */
 // כשיש גרסה חדשה באתר — טוענים אותה (הנתונים בטלפון לא נפגעים, הם שמורים בנפרד)
-const APP_VERSION = '2026-11-21i';
+const APP_VERSION = '2026-11-23a';
 function checkUpdate(){
   if(!/^https?:/.test(location.protocol)) return;
   fetch('version.json?t=' + Date.now(), {cache:'no-store'})
@@ -1449,7 +1454,38 @@ function checkUpdate(){
       else checkUpdate.pending = go;
     }).catch(() => {});
 }
-document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') checkUpdate(); });
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') checkUpdate(); else sendReport(); });
+
+/* ================= דיווח אוטומטי להורה (לא מוצג לילדים) ================= */
+// כתובת ה-Web App של Google Apps Script (parent-report/Code.gs). ריק = לא שולחים כלום.
+const REPORT_URL = '';
+const isoDay = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+// סיכום יומי לכל קבוצה (ילד): S.rep[תאריך][קבוצה]
+function repLog(fn){
+  try{
+    S.rep = S.rep || {};
+    const day = isoDay(), g = (curGroup() || {}).id || 'default';
+    const D = S.rep[day] || (S.rep[day] = {});
+    const r = D[g] || (D[g] = {a:0, c:0, ms:0, t:0, sessions:0, tests:[], known:0});
+    fn(r);
+    r.bank = curBank().name; r.ready = stats(allWords()).ready; r.last = Date.now();
+    Object.keys(S.rep).sort().slice(0, -14).forEach(k => delete S.rep[k]);
+    clearTimeout(repLog.t); repLog.t = setTimeout(sendReport, 20000); // שליחה ~20 שניות אחרי פעילות
+  }catch(e){}
+}
+function sendReport(){
+  if(!REPORT_URL || !S.rep) return;
+  try{
+    if(!S.device){ S.device = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); save(); }
+    const days = [];
+    Object.keys(S.rep).sort().slice(-3).forEach(date => Object.entries(S.rep[date]).forEach(([group, r]) => days.push({date, group, ...r})));
+    if(!days.length) return;
+    const body = JSON.stringify({device:S.device, name:S.name || '', v:APP_VERSION, days});
+    if(navigator.sendBeacon && navigator.sendBeacon(REPORT_URL, new Blob([body], {type:'text/plain'}))) return;
+    fetch(REPORT_URL, {method:'POST', mode:'no-cors', keepalive:true, headers:{'Content-Type':'text/plain'}, body}).catch(() => {});
+  }catch(e){}
+}
+setTimeout(sendReport, 4000); // גם בפתיחה — כדי שנתונים מסשן קודם יגיעו
 setTimeout(checkUpdate, 1500);
 
 home();
