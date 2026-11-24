@@ -85,6 +85,11 @@ button{font-family:inherit;cursor:pointer;border:none}
 .say{background:#eeedf7;border-radius:50%;width:48px;height:48px;font-size:22px;margin-top:12px}
 .say.huge{width:110px;height:110px;font-size:52px;background:linear-gradient(135deg,#a78bfa,#6366f1);color:#fff;box-shadow:0 10px 24px rgba(99,102,241,.4)}
 .opts{display:grid;gap:10px}
+.optrow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:stretch}
+.sayhe{background:#eeedf7;border-radius:14px;min-width:46px;font-size:20px;padding:0 10px;vertical-align:middle}
+.word .sayhe{font-size:18px;height:40px;min-width:40px;border-radius:50%;padding:0;margin-inline-start:6px}
+.optrow .sayhe{background:#fff;box-shadow:0 5px 14px rgba(30,20,90,.15)}
+.sheet .sayhe{height:34px;min-width:34px;font-size:16px;border-radius:50%;padding:0;background:rgba(255,255,255,.7)}
 .opt{background:#fff;border-radius:18px;padding:18px 14px;font-size:21px;font-weight:600;color:var(--ink);
   box-shadow:0 5px 14px rgba(30,20,90,.15);border:3px solid transparent;transition:transform .1s}
 .opt.right{background:var(--ok-bg);border-color:var(--ok)}
@@ -201,7 +206,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 <div id="app"></div>
 <div id="toast"></div>
 <canvas id="confetti"></canvas>
-<script src="words.js?v=2026-11-23a"></script>
+<script src="words.js?v=2026-11-24a"></script>
 <script>
 'use strict';
 /* ================= הגדרות ================= */
@@ -377,7 +382,29 @@ function pickVoice(){
   }
   voice = voice || vs.find(v => L(v) === 'en-us' && v.localService) || vs.find(v => L(v) === 'en-us') || vs.find(v => L(v) === 'en-gb') || vs[0] || null;
 }
-if('speechSynthesis' in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+let heVoice = null;
+function pickHeVoice(){
+  if(!('speechSynthesis' in window)) return;
+  const L = v => String(v.lang).replace('_','-').toLowerCase();
+  const vs = speechSynthesis.getVoices().filter(v => /^(he|iw)\b/.test(L(v)));
+  heVoice = vs.find(v => /google/i.test(v.name)) || vs.find(v => v.localService) || vs[0] || null;
+}
+if('speechSynthesis' in window){ pickVoice(); pickHeVoice(); speechSynthesis.onvoiceschanged = () => { pickVoice(); pickHeVoice(); }; }
+// הקראה בעברית (כפתור 🔊 ליד מילים ופירושים בעברית)
+function speakHe(text){
+  if(!('speechSynthesis' in window)) return;
+  stopSpeak();
+  try{
+    if(!heVoice) pickHeVoice();
+    const t = String(text).replace(/\.{2,}|…/g, '').replace(/[\/()]/g, ', ').replace(/\s+/g, ' ').replace(/(\s*,\s*)+/g, ', ').replace(/^[\s,]+|[\s,]+$/g, '');
+    const u = new SpeechSynthesisUtterance(t);
+    u.lang = heVoice ? heVoice.lang.replace('_','-') : 'he-IL'; u.rate = 0.9; if(heVoice) u.voice = heVoice;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+const sayHe = he => `<button class="sayhe" data-he="${esc(he)}" aria-label="הקרא בעברית">🔊</button>`;
+// לחיצה על 🔊 עברית — לא מפעילה את מה שמתחתיה (למשל הפיכת כרטיסייה)
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.sayhe'); if(b){ e.stopPropagation(); e.preventDefault(); speakHe(b.dataset.he); } }, true);
 // השמעה: כל השמעה חדשה מבטלת השמעה קודמת שעוד מחכה, כדי שלא תישמע מילה של שאלה קודמת
 let speakT;
 function stopSpeak(){ clearTimeout(speakT); try{ speechSynthesis.cancel(); }catch(e){} }
@@ -737,7 +764,7 @@ function renderQ(){
     body = `<div class="card prompt pop">
       <div class="lbl">מילה חדשה! 🌱</div>
       <div class="word en">${esc(display(w.en))}</div>${say}
-      <div class="word he" style="margin-top:14px;color:var(--primary)">${esc(w.he)}</div>
+      <div class="word he" style="margin-top:14px;color:var(--primary)">${esc(w.he)} ${sayHe(w.he)}</div>
       <p class="tap">תסתכל, תקשיב, ותגיד אותה בקול 😊</p></div>
       <button class="btn wide" onclick="introNext()">הבנתי, יאללה! ←</button>`;
     if(S.settings.autospeak) speak(w.en, 250);
@@ -747,7 +774,7 @@ function renderQ(){
         <div class="card face prompt"><div class="lbl">אתה יודע מה זה?</div><div class="word en">${esc(display(w.en))}</div>
           <div class="tap">👆 לחץ כדי להפוך</div></div>
         <div class="card face back prompt"><div class="word en" style="font-size:26px;color:var(--muted)">${esc(display(w.en))}</div>
-          <div class="word he" style="color:var(--primary)">${esc(w.he)}</div></div>
+          <div class="word he" style="color:var(--primary)">${esc(w.he)} ${sayHe(w.he)}</div></div>
       </div></div>
       <div id="fbtns" style="display:none" class="row2">
         <button class="btn red" onclick="flashAns(false)">😅 עוד לא</button>
@@ -760,16 +787,16 @@ function renderQ(){
     const head = q.type === 'listen'
       ? `<div class="card prompt"><div class="lbl">הקשב — מה הפירוש?</div><button class="say huge" onclick="speak(sess.queue[sess.i].w.en)">🔊</button></div>`
       : `<div class="card prompt"><div class="lbl">מה הפירוש של:</div><div class="word en">${esc(display(w.en))}</div>${say}</div>`;
-    body = head + `<div class="opts">${sess.opts.map((o,i) => `<button class="opt" onclick="pick(${i})">${esc(o)}</button>`).join('')}</div>`;
+    body = head + `<div class="opts">${sess.opts.map((o,i) => `<div class="optrow"><button class="opt" onclick="pick(${i})">${esc(o)}</button>${sayHe(o)}</div>`).join('')}</div>`;
     if(q.type === 'listen' || S.settings.autospeak) speak(w.en, 250);
   }
   else if(q.type === 'he2en'){
     sess.opts = options(w, 'en'); sess.answer = w.en;
-    body = `<div class="card prompt"><div class="lbl">איך אומרים באנגלית:</div><div class="word he">${esc(w.he)}</div></div>
+    body = `<div class="card prompt"><div class="lbl">איך אומרים באנגלית:</div><div class="word he">${esc(w.he)} ${sayHe(w.he)}</div></div>
       <div class="opts">${sess.opts.map((o,i) => `<button class="opt en" onclick="pick(${i})">${esc(display(o))}</button>`).join('')}</div>`;
   }
   else if(q.type === 'type'){
-    body = `<div class="card prompt typebox"><div class="lbl">כתוב באנגלית:</div><div class="word he">${esc(w.he)}</div>
+    body = `<div class="card prompt typebox"><div class="lbl">כתוב באנגלית:</div><div class="word he">${esc(w.he)} ${sayHe(w.he)}</div>
       <div class="slots" id="slots">${slots(w,0)}</div>
       <input id="ti" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="type here…">
       <div class="typebtns">
@@ -969,7 +996,7 @@ function afterAnswer(ok, q, isFlash=false, note=null){
   const w = q.w;
   let title = ok ? rnd(PRAISE) : rnd(COMFORT);
   if(ok && [3,5,10,15,20].includes(sess.combo)) title = `🔥 ${sess.combo} ברצף! ${rnd(PRAISE)}`;
-  const pair = `<span class="en"><b>${esc(display(w.en))}</b></span> = ${esc(w.he)}`;
+  const pair = `<span class="en"><b>${esc(display(w.en))}</b></span> = ${esc(w.he)} ${sayHe(w.he)}`;
   const text = note ? `${note}<br>${pair}` : (ok ? (['listen','type','say','listenSay'].includes(q.type) ? pair : '') : `התשובה הנכונה: ${pair}`);
   showSheet(ok, `${ok ? '✅' : '💡'} ${title}`, text, !ok || isFlash ? 'המשך' : null);
   if(!ok) speak(w.en, 300);
@@ -1440,7 +1467,7 @@ function drawQR(){
 /* ================= התחלה ================= */
 /* ================= עדכון אוטומטי ================= */
 // כשיש גרסה חדשה באתר — טוענים אותה (הנתונים בטלפון לא נפגעים, הם שמורים בנפרד)
-const APP_VERSION = '2026-11-23a';
+const APP_VERSION = '2026-11-24a';
 function checkUpdate(){
   if(!/^https?:/.test(location.protocol)) return;
   fetch('version.json?t=' + Date.now(), {cache:'no-store'})
