@@ -374,12 +374,19 @@ const BANK3 = [
   { cat: 'אחר', en: 'welcome',         he: 'ברוך הבא / לקבל בברכה' },
 ];
 
+// ===== כפיר — Get Ready 1 (עמוד New Words) — רמה ייעודית, אותם תרגומים כמו במבחן 2 =====
+const GR1_WORDS = ['ability','adult','athlete','champion','distance','effort','exercise','goal','race','role','success','training',
+  'become','compete','dream','practice','prove','reach','win (won)/win/won','healthy','professional','badly',
+  "it doesn't matter/it does not matter",'role model'];
+const BANK4 = GR1_WORDS.map(en => BANK2.find(w => w.en === en)).filter(Boolean);
+
 // כל הבנקים. ה-id קבוע — לא לשנות (הבחירה והנתונים נשמרים לפי ה-id)
 window.BANKS = [
   { id: 'bank1', name: 'מבחן 1', words: BANK1 },
   { id: 'bank2', name: 'מבחן 2 — Get Ready', words: BANK2 },
   { id: 'bank0', name: 'Unit 1 — מבחן 30/11', words: BANK0 },
   { id: 'bank3', name: 'חוברת — Getting Ready', words: BANK3 },
+  { id: 'bank4', name: '⭐ Get Ready 1', words: BANK4 },
 ];
 
 // ===== קבוצות — לכל ילד הרמות שלו =====
@@ -389,7 +396,7 @@ window.BANKS = [
 // הרמה האחרונה בקבוצה נפתחת כברירת מחדל (למי שעוד לא בחר רמה בעצמו).
 window.GROUPS = [
   // כפיר בכיתה גבוהה יותר — המילים של יעלי הן הרמות הנמוכות שלו (לחזרה)
-  { id: 'kfir',  name: 'כפיר', banks: ['bank0', 'bank3', 'bank1', 'bank2'] },
+  { id: 'kfir',  name: 'כפיר', banks: ['bank0', 'bank3', 'bank1', 'bank2', 'bank4'] },
   { id: 'yaeli', name: 'יעלי', banks: ['bank0', 'bank3'] },
 ];
 window.WORDS = BANK1;            // תאימות לגרסאות ישנות (הרשימה המקורית)
