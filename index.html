@@ -208,7 +208,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 <div id="app"></div>
 <div id="toast"></div>
 <canvas id="confetti"></canvas>
-<script src="words.js?v=2026-11-25b"></script>
+<script src="words.js?v=2026-11-27a"></script>
 <script>
 'use strict';
 /* ================= הגדרות ================= */
@@ -288,7 +288,7 @@ function curBank(){
   const bi = builtinBanks();
   const gid = (curGroup() || {}).id;
   const chosen = (S.bankByGroup || {})[gid] || S.bank; // הרמה שנבחרה — לכל קבוצה בנפרד
-  return bl.find(b => b.id === chosen) || bl.find(b => b.id === window.DEFAULT_BANK) || bl.find(b => b.id === bi[bi.length - 1].id) || bl[0];
+  return bl.find(b => b.id === chosen) || bl.find(b => b.id === window.DEFAULT_BANK) || bi.slice().reverse().map(x => bl.find(b => b.id === x.id)).find(b => b && bankWords(b).length) || bl[0];
 }
 function setBank(id){
   S.bank = id;
@@ -495,7 +495,8 @@ function grade(w, ok, kind){
   if(ok){
     p.ok++;
     let cap = 5;
-    // איות באנגלית לא חלק מהחומר — אפשר "לדעת" מילה גם בלי לכתוב אותה
+    // בדרך כלל אפשר "לדעת" מילה בלי לכתוב אותה; ברמת הכתבה — רק אחרי שכתב אותה נכון
+    if(kind === 'choice' && spellWord(w)) cap = 4;
     if(kind === 'flash') cap = 2;
     if(kind === 'match') cap = 3;
     if(kind === 'hint') cap = p.lvl;
@@ -583,10 +584,18 @@ function pickMain(n, maxNew){
   }
   return res;
 }
+// רמת הכתבה: בנק עם spelling:true — מילים ממנו כוללות גם הקלדה באנגלית
+const spellLevel = () => !!curBank().spelling;
+const spellWord = w => spellLevel() && !isReview(w);
 function smartType(w){
   const p = peek(w);
   if(!p || !p.seen) return 'intro';
   const l = p.lvl;
+  if(spellWord(w)){ // הכתבה: מכירים את המילה ואז מתרגלים לכתוב אותה
+    if(l <= 1) return rnd(['en2he','listen','he2en']);
+    if(l === 2) return rnd(['type','he2en','type']);
+    return rnd(['type','type','type','listenSay']);
+  }
   // listen = שומעים ובוחרים מרשימה; listenSay = שומעים ועונים בעברית (קול או כתיבה)
   if(l <= 1) return rnd(['en2he','en2he','listen','listen']);
   if(l === 2) return rnd(['he2en','listen','en2he','listenSay']);
@@ -669,7 +678,7 @@ function home(){
     <div class="chip"><b>🔥 ${streak}</b><small>ימים ברצף</small></div>
     <div class="chip"><b>🏅 ${bestTest() || '-'}</b><small>שיא במבחן</small></div>
   </div>
-  ${allWords().length < 4 ? `<div class="card">צריך לפחות 4 מילים כדי לשחק. הוסיפו מילים ב⚙️ הגדרות.</div>` : `
+  ${allWords().length < 4 ? `<div class="card">${curBank().spelling && !allWords().length ? '✍️ רמת ההכתבה עוד ריקה — המילים יתווספו בקרוב.' : 'צריך לפחות 4 מילים כדי לשחק. הוסיפו מילים ב⚙️ הגדרות.'}</div>` : `
   <button class="big" onclick="startSmart()">🚀 תרגול חכם<small>מתמקד במילים שעוד לא יודע</small></button>
   <div class="grid">
     <button class="game" onclick="startMode('flash')"><span class="ic">🃏</span><b>כרטיסיות</b><small>כל ${ws.length} המילים</small></button>
@@ -728,7 +737,8 @@ function startTest(){
   }
   // בלי איות באנגלית. חלק מהשאלות בשמיעה בלבד (רואים את המילה רק אחרי התשובה)
   const types = shuffle(['en2he','he2en','listen','listenSay']);
-  newSession('test', shuffle(ws).map((w,i) => ({w, type: types[i % types.length]})));
+  let si = 0;
+  newSession('test', shuffle(ws).map((w,i) => ({w, type: spellWord(w) ? (si++ % 3 === 2 ? 'he2en' : 'type') : types[i % types.length]}))); // ברמת הכתבה: רוב השאלות הקלדה
 }
 
 function topBar(){
@@ -761,7 +771,7 @@ function renderQ(){
   if(sess && sess.rec){ try{ sess.rec.abort(); }catch(e){} sess.rec = null; }
   const q = sess.queue[sess.i];
   if(!q) return endSession();
-  if(q.type === 'type' && sess.mode !== 'type') q.type = 'he2en'; // איות באנגלית — רק בכפתור "איות"
+  if(q.type === 'type' && sess.mode !== 'type' && !spellWord(q.w)) q.type = 'he2en'; // איות באנגלית — רק בכפתור "איות"
   sess.locked = false; sess.hint = 0;
   const w = q.w, say = `<button class="say" onclick="speak(sess.queue[sess.i].w.en)">🔊</button>`;
   let body = '';
@@ -1472,7 +1482,7 @@ function drawQR(){
 /* ================= התחלה ================= */
 /* ================= עדכון אוטומטי ================= */
 // כשיש גרסה חדשה באתר — טוענים אותה (הנתונים בטלפון לא נפגעים, הם שמורים בנפרד)
-const APP_VERSION = '2026-11-25b';
+const APP_VERSION = '2026-11-27a';
 function checkUpdate(){
   if(!/^https?:/.test(location.protocol)) return;
   fetch('version.json?t=' + Date.now(), {cache:'no-store'})

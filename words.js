@@ -380,6 +380,10 @@ const GR1_WORDS = ['ability','adult','athlete','champion','distance','effort','e
   "it doesn't matter/it does not matter",'role model'];
 const BANK4 = GR1_WORDS.map(en => BANK2.find(w => w.en === en)).filter(Boolean);
 
+// ===== כפיר — הכתבה (spelling): מקבל מילה בעברית ומקליד באנגלית. המילים יתווספו =====
+const BANK5 = [
+];
+
 // כל הבנקים. ה-id קבוע — לא לשנות (הבחירה והנתונים נשמרים לפי ה-id)
 window.BANKS = [
   { id: 'bank1', name: 'מבחן 1', words: BANK1 },
@@ -387,6 +391,7 @@ window.BANKS = [
   { id: 'bank0', name: 'Unit 1 — מבחן 30/11', words: BANK0 },
   { id: 'bank3', name: 'חוברת — Getting Ready', words: BANK3 },
   { id: 'bank4', name: '⭐ Get Ready 1', words: BANK4 },
+  { id: 'bank5', name: '✍️ הכתבה', words: BANK5, spelling: true },
 ];
 
 // ===== קבוצות — לכל ילד הרמות שלו =====
@@ -396,7 +401,7 @@ window.BANKS = [
 // הרמה האחרונה בקבוצה נפתחת כברירת מחדל (למי שעוד לא בחר רמה בעצמו).
 window.GROUPS = [
   // כפיר בכיתה גבוהה יותר — המילים של יעלי הן הרמות הנמוכות שלו (לחזרה)
-  { id: 'kfir',  name: 'כפיר', banks: ['bank0', 'bank3', 'bank1', 'bank2', 'bank4'] },
+  { id: 'kfir',  name: 'כפיר', banks: ['bank0', 'bank3', 'bank1', 'bank2', 'bank4', 'bank5'] },
   { id: 'yaeli', name: 'יעלי', banks: ['bank0', 'bank3'] },
 ];
 window.WORDS = BANK1;            // תאימות לגרסאות ישנות (הרשימה המקורית)
