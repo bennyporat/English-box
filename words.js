@@ -380,9 +380,9 @@ const GR1_WORDS = ['ability','adult','athlete','champion','distance','effort','e
   "it doesn't matter/it does not matter",'role model'];
 const BANK4 = GR1_WORDS.map(en => BANK2.find(w => w.en === en)).filter(Boolean);
 
-// ===== כפיר — הכתבה (spelling): מקבל מילה בעברית ומקליד באנגלית. המילים יתווספו =====
-const BANK5 = [
-];
+// ===== כפיר — הכתבה (spelling): מקבל מילה בעברית ומקליד באנגלית =====
+// הכתבה 1: מילות Get Ready 1 (אותן מילים ותרגומים כמו ברמה "⭐ Get Ready 1")
+const BANK5 = BANK4.slice();
 
 // כל הבנקים. ה-id קבוע — לא לשנות (הבחירה והנתונים נשמרים לפי ה-id)
 window.BANKS = [
