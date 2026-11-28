@@ -208,7 +208,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 <div id="app"></div>
 <div id="toast"></div>
 <canvas id="confetti"></canvas>
-<script src="words.js?v=2026-11-27b"></script>
+<script src="words.js?v=2026-11-28a"></script>
 <script>
 'use strict';
 /* ================= הגדרות ================= */
@@ -304,10 +304,10 @@ function lowerWords(){
   const here = new Set(allWords().map(w => key(w.en)));
   return uniq(lowerBanks().flatMap(b => bankWords(b))).filter(w => !here.has(key(w.en)));
 }
-function levelWords(){ return uniq(allWords().concat(lowerWords())); } // הרמה הנוכחית + כל מה שמתחתיה
+function levelWords(){ return curBank().spelling ? allWords() : uniq(allWords().concat(lowerWords())); } // בהכתבה — רק המילים שלה // הרמה הנוכחית + כל מה שמתחתיה
 // חזרה רק כשמתרגלים את כל הבנק (לא כשבחר מילים מסוימות או נושא מסוים)
 const reviewWanted = () => S.settings.review !== false; // מתג: לכלול חזרה על רמות קודמות (ברירת מחדל: כן)
-const reviewOn = () => reviewWanted() && !focusOn() && !(S.cat && cats().includes(S.cat)) && lowerWords().length > 0;
+const reviewOn = () => !curBank().spelling && reviewWanted() && !focusOn() && !(S.cat && cats().includes(S.cat)) && lowerWords().length > 0;
 function wordBankName(w){ const k = key(w.en); const b = bankList().find(b => bankWords(b).some(x => key(x.en) === k)); return b ? b.name : ''; }
 const isReview = w => !allWords().some(x => key(x.en) === key(w.en));
 function bankKey(b){ return b ? b.id : ''; }
@@ -633,7 +633,7 @@ function home(){
   ${groups() && groups().length > 1 ? `<div class="filters">${groups().map((g,i) => `<button class="${g.id === curGroup().id ? 'on' : ''}" onclick="if(groups()[${i}].id !== curGroup().id && confirm('לעבור לקבוצה של ' + groups()[${i}].name + '?')) setGroup(groups()[${i}].id)">${i % 2 ? '👧' : '👦'} ${esc(g.name)}</button>`).join('')}</div>` : ''}
   <div class="banks">
     <div class="blabel">📚 רמה (בנק מילים)${curGroup() ? ' — ' + esc(curGroup().name) : ''}</div>
-    ${lowerBanks().length ? `<label class="revsw"><input type="checkbox" ${reviewWanted() ? 'checked' : ''} onchange="S.settings.review=this.checked;save();home()">
+    ${curBank().spelling ? `<div style="color:#fff;opacity:.85;font-size:12px;margin:-4px 0 8px">✍️ הכתבה — רק המילים של הרמה הזו</div>` : lowerBanks().length ? `<label class="revsw"><input type="checkbox" ${reviewWanted() ? 'checked' : ''} onchange="S.settings.review=this.checked;save();home()">
       <span>${reviewWanted() ? '🔁 כולל חזרה על רמות קודמות (70% הרמה הזו, 30% חזרה)' : '🎯 רק הרמה הזו — בלי מילים מרמות קודמות'}</span></label>`
       : `<div style="color:#fff;opacity:.85;font-size:12px;margin:-4px 0 8px">מתרגלים את הרמה שבחרת</div>`}
     <div class="filters" style="margin:0">
@@ -1482,7 +1482,7 @@ function drawQR(){
 /* ================= התחלה ================= */
 /* ================= עדכון אוטומטי ================= */
 // כשיש גרסה חדשה באתר — טוענים אותה (הנתונים בטלפון לא נפגעים, הם שמורים בנפרד)
-const APP_VERSION = '2026-11-27b';
+const APP_VERSION = '2026-11-28a';
 function checkUpdate(){
   if(!/^https?:/.test(location.protocol)) return;
   fetch('version.json?t=' + Date.now(), {cache:'no-store'})
