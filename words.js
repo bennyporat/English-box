@@ -142,11 +142,12 @@ const BANK1 = [
 ];
 
 // ===== מבחן 2 — Get Ready 1, Get Ready 2, Listening (Word Review עמ' 56) =====
+// תרגומי Get Ready 1 — לפי הספר (Learn New Words, עמ' 36)
 const BANK2 = [
   // ----- שמות עצם -----
   { cat: 'שמות עצם', en: 'ability',     he: 'יכולת' },
   { cat: 'שמות עצם', en: 'adult',       he: 'מבוגר' },
-  { cat: 'שמות עצם', en: 'athlete',     he: 'ספורטאי' },
+  { cat: 'שמות עצם', en: 'athlete',     he: 'אתלט' },
   { cat: 'שמות עצם', en: 'audience',    he: 'קהל' },
   { cat: 'שמות עצם', en: 'cash',        he: 'מזומן / כסף מזומן' },
   { cat: 'שמות עצם', en: 'champion',    he: 'אלוף' },
@@ -155,8 +156,8 @@ const BANK2 = [
   { cat: 'שמות עצם', en: 'distance',    he: 'מרחק' },
   { cat: 'שמות עצם', en: 'effort',      he: 'מאמץ' },
   { cat: 'שמות עצם', en: 'event',       he: 'אירוע' },
-  { cat: 'שמות עצם', en: 'exercise',    he: 'תרגיל / התעמלות' },
-  { cat: 'שמות עצם', en: 'goal',        he: 'מטרה / שער (בכדורגל)' },
+  { cat: 'שמות עצם', en: 'exercise',    he: 'התעמלות' },
+  { cat: 'שמות עצם', en: 'goal',        he: 'מטרה' },
   { cat: 'שמות עצם', en: 'heart',       he: 'לב' },
   { cat: 'שמות עצם', en: 'instruction', he: 'הוראה' },
   { cat: 'שמות עצם', en: 'judge',       he: 'שופט' },
@@ -168,7 +169,7 @@ const BANK2 = [
   { cat: 'שמות עצם', en: 'project',     he: 'פרויקט / משימה' },
   { cat: 'שמות עצם', en: 'puzzle',      he: 'פאזל / חידה' },
   { cat: 'שמות עצם', en: 'quiz',        he: 'חידון' },
-  { cat: 'שמות עצם', en: 'race',        he: 'מירוץ' },
+  { cat: 'שמות עצם', en: 'race',        he: 'מרוץ' },
   { cat: 'שמות עצם', en: 'role',        he: 'תפקיד' },
   { cat: 'שמות עצם', en: 'stage',       he: 'במה / שלב' },
   { cat: 'שמות עצם', en: 'success',     he: 'הצלחה' },
@@ -179,7 +180,7 @@ const BANK2 = [
 
   // ----- פעלים -----
   { cat: 'פעלים', en: 'appear',     he: 'להופיע / להיראות' },
-  { cat: 'פעלים', en: 'become',     he: 'להפוך ל... / להיות' },
+  { cat: 'פעלים', en: 'become',     he: 'להפוך ל-' },
   { cat: 'פעלים', en: 'collect',    he: 'לאסוף' },
   { cat: 'פעלים', en: 'compete',    he: 'להתחרות' },
   { cat: 'פעלים', en: 'discover',   he: 'לגלות' },
@@ -188,17 +189,17 @@ const BANK2 = [
   { cat: 'פעלים', en: 'expect',     he: 'לצפות (שיקרה) / לחכות ל...' },
   { cat: 'פעלים', en: 'lose',       he: 'להפסיד / לאבד' },
   { cat: 'פעלים', en: 'perform',    he: 'לבצע / להופיע (על במה)' },
-  { cat: 'פעלים', en: 'practice',   he: 'להתאמן / לתרגל' },
+  { cat: 'פעלים', en: 'practice',   he: 'לתרגל' },
   { cat: 'פעלים', en: 'prove',      he: 'להוכיח' },
-  { cat: 'פעלים', en: 'reach',      he: 'להגיע ל...' },
+  { cat: 'פעלים', en: 'reach',      he: 'להשיג' },
   { cat: 'פעלים', en: 'take part (in)/take part', he: 'להשתתף (ב...)' },
   { cat: 'פעלים', en: 'try out',    he: 'לנסות / להיבחן (לקבוצה)' },
-  { cat: 'פעלים', en: 'win (won)/win/won', he: 'לנצח / לזכות' },
+  { cat: 'פעלים', en: 'win (won)/win/won', he: 'לנצח' },
   { cat: 'פעלים', en: 'wish',       he: 'לאחל / לרצות מאוד' },
 
   // ----- אחר -----
   { cat: 'אחר', en: 'at least',          he: 'לפחות' },
-  { cat: 'אחר', en: 'badly',             he: 'רע / בצורה גרועה' },
+  { cat: 'אחר', en: 'badly',             he: 'מאוד' },
   { cat: 'אחר', en: "I don't mind/I do not mind", he: 'לא אכפת לי / לא מפריע לי' },
   { cat: 'אחר', en: 'in that case',      he: 'במקרה כזה / אם כך' },
   { cat: 'אחר', en: "it doesn't matter/it does not matter", he: 'זה לא משנה' },
